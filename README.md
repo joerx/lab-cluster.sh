@@ -4,7 +4,7 @@ Collection of shell scripts to manage k3s lab clusters running on `libvirt` VMs.
 
 ## Disclaimer
 
-This is more of an exercise for me than an attempt to build something useful for the general public. Leaving this here in case it is useful to anyone.
+This is more of an exercise for me than an attempt to build something useful for the general public. Leaving this here in case it is of any use to anyone.
 
 ## Preconditions
 
