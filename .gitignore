@@ -1,0 +1,5 @@
+images/*
+!images/.gitkeep
+
+vms/*
+!vms/.gitkeep
