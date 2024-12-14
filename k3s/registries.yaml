@@ -1,0 +1,4 @@
+mirrors:
+  registry.k3s-lab.local:
+    endpoint:
+      - "http://registry.k3s-lab.local"
