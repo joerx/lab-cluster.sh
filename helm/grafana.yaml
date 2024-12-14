@@ -1,0 +1,35 @@
+# helm/grafana.yaml
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: my-ca-issuer
+  hosts:
+    - grafana.k3s-lab.local
+  tls:
+    - secretName: grafana-tls
+      hosts:
+        - grafana.k3s-lab.local
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        orgId: 1
+        editable: true
+        url: http://prometheus-server.monitoring.svc:80
+        version: 1
+      - name: Loki
+        type: loki
+        orgId: 1
+        access: proxy
+        url: http://loki.monitoring.svc:3100
+        jsonData:
+          timeout: 60
+          maxLines: 100
+
+persistence:
+  type: pvc
+  enabled: true
