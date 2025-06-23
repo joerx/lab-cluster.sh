@@ -1,0 +1,37 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: my-self-signed-issuer
+  namespace: cert-manager
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: my-self-signed-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: my-self-signed-ca.k3s-lab.local
+  secretName: my-self-signed-ca
+  subject:
+    organizations:
+      - k3s-lab.local
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: my-self-signed-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: my-ca-issuer
+  namespace: cert-manager
+spec:
+  ca:
+    secretName: my-self-signed-ca
