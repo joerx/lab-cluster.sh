@@ -1,0 +1,28 @@
+crds:
+  create: true
+
+## Various Alloy settings. For backwards compatibility with the grafana-agent
+## chart, this field may also be called "agent". Naming this field "agent" is
+## deprecated and will be removed in a future release.
+alloy:
+  configMap:
+    create: true
+    content: ''
+
+ingress:
+  # -- Enables ingress for Alloy (Faro port)
+  enabled: true
+  # For Kubernetes >= 1.18 you should specify the ingress-controller via the field ingressClassName
+  # See https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#specifying-the-class-of-an-ingress
+  # ingressClassName: nginx
+  # Values can be templated
+  annotations:
+    cert-manager.io/cluster-issuer: my-ca-issuer
+  path: /
+  faroPort: 12347
+  hosts:
+    - alloy.k3s-lab.local
+  tls:
+   - secretName: alloy-server-tls
+     hosts:
+       - alloy.k3s-lab.local
