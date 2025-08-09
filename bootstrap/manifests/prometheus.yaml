@@ -6,20 +6,18 @@ metadata:
 spec:
   project: bootstrap
   sources:
-  - repoURL: 'https://prometheus-community.github.io/helm-charts'
-    chart: prometheus
-    targetRevision: 27.20.0
-    helm:
-      valueFiles:
-      - $values/helm/prometheus.yaml
-  - repoURL: 'git@github.com:joerx/lab-cluster.sh.git'
-    targetRevision: argo-bootstrap
-    ref: values
+    - repoURL: 'https://prometheus-community.github.io/helm-charts'
+      chart: prometheus
+      targetRevision: 27.20.0
+      helm:
+        valueFiles:
+        - $values/helm/prometheus.yaml
+    - repoURL: 'git@github.com:joerx/lab-cluster.sh.git'
+      targetRevision: argo-bootstrap
+      ref: values
   destination:
     server: "https://kubernetes.default.svc"
     namespace: monitoring
   syncPolicy:
-    # automated:
-    #   prune: true
     syncOptions:
       - CreateNamespace=true

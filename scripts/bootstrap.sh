@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# This script is designed to be idempotent, it should be safe to run multiple times
+# This can be useful to update the deployed application if necessary.
+
 set -e -o pipefail
 
 KUBECONFIG=""
@@ -14,6 +17,7 @@ log() {
 }
 
 # Parse arguments
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --kubecfg)
@@ -126,7 +130,7 @@ metadata:
 spec:
   project: bootstrap
   source:
-    path: bootstrap/manifests
+    path: bootstrap/auto-sync
     repoURL: '$REPO_URL'
     targetRevision: '$TARGET_REVISION'
   destination:
@@ -137,6 +141,7 @@ spec:
       prune: true
 EOF
 
+# Print summary and help message
 log
 log "-------------------------------------------------------------------------"
 log "ArgoCD application 'cluster-bootstrap' created in namespace '$NAMESPACE'."
