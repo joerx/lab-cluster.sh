@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-ca
+  namespace: argocd
+spec:
+  project: bootstrap
+  source:
+    repoURL: 'git@github.com:joerx/lab-cluster.sh.git'
+    path: manifests/cert-manager
+    targetRevision: argo-bootstrap
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: cert-manager
+  syncPolicy:
+    # automated:
+    #   prune: true
+    syncOptions:
+      - CreateNamespace=true

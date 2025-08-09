@@ -12,14 +12,14 @@ spec:
     helm:
       valueFiles:
       - $values/helm/prometheus.yaml
-  - repoURL: 'https://git.example.com/org/value-files.git'
+  - repoURL: 'git@github.com:joerx/lab-cluster.sh.git'
     targetRevision: argo-bootstrap
     ref: values
   destination:
     server: "https://kubernetes.default.svc"
     namespace: monitoring
   syncPolicy:
-    automated:
-      prune: true
+    # automated:
+    #   prune: true
     syncOptions:
       - CreateNamespace=true
