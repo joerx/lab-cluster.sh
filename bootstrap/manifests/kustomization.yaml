@@ -3,5 +3,5 @@ kind: Kustomization
 resources:
   - cert-manager.yaml
   - cluster-ca.yaml
-  - nginx.yaml
+  - ingress-nginx.yaml
   - prometheus.yaml
