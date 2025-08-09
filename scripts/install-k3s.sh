@@ -15,13 +15,14 @@ fi
 
 IP_ADDR=$(./vm-addr.sh $NAME 20)
 
+# Install k3s inside the VM. We disable traefik and will install ingress-nginx instead later.
 ssh -t centos@$IP_ADDR 'curl -sfL https://get.k3s.io | sh -s - --disable=traefik --write-kubeconfig-mode=644'
 
+# Fetch the kubeconfig file from the VM, replacing the server with the VM's IP address
 ssh centos@$IP_ADDR -- cat /etc/rancher/k3s/k3s.yaml | sed "s/server: .*$/server: https:\/\/$IP_ADDR:6443/" > $KUBECFG_OUT
-
 echo "Kubernetes config written to $KUBECFG_OUT"
 
+# Validate it worked and we can successfully connect to the cluster
 CMD="KUBECONFIG=$KUBECFG_OUT kubectl get node"
-
 echo "Running '$CMD' to validate"
 eval $CMD
