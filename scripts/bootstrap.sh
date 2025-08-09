@@ -106,6 +106,8 @@ spec:
   sourceRepos:
   - '$REPO_URL'
   - 'https://kubernetes.github.io/ingress-nginx'
+  - 'https://prometheus-community.github.io/helm-charts'
+  - 'https://charts.jetstack.io'
   destinations:
   - namespace: '*'
     server: '*'
