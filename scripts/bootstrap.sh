@@ -133,6 +133,12 @@ spec:
     path: bootstrap/argocd
     repoURL: '$REPO_URL'
     targetRevision: '$TARGET_REVISION'
+    helm:
+      parameters:
+        - name: source.repoURL
+          value: '$REPO_URL'
+        - name: source.targetRevision
+          value: '$TARGET_REVISION'
   destination:
     namespace: default
     server: 'https://kubernetes.default.svc'

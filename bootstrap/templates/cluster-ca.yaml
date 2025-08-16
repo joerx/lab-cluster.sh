@@ -6,9 +6,9 @@ metadata:
 spec:
   project: bootstrap
   source:
-    repoURL: 'git@github.com:joerx/lab-cluster.sh.git'
+    repoURL: '{{ .Values.source.repoURL }}'
+    targetRevision: '{{ .Values.source.targetRevision }}'
     path: manifests/cert-manager
-    targetRevision: argo-bootstrap
   destination:
     server: "https://kubernetes.default.svc"
     namespace: cert-manager

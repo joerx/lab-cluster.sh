@@ -12,8 +12,8 @@ spec:
       helm:
         valueFiles:
         - $values/helm/prometheus.yaml
-    - repoURL: 'git@github.com:joerx/lab-cluster.sh.git'
-      targetRevision: argo-bootstrap
+    - repoURL: '{{ .Values.source.repoURL }}'
+      targetRevision: '{{ .Values.source.targetRevision }}'
       ref: values
   destination:
     server: "https://kubernetes.default.svc"

@@ -1,0 +1,7 @@
+autosync:
+  enabled: true
+  prune: 
+
+source:
+  targetRevision: main
+  repoURL: git@github.com:joerx/lab-cluster.sh.git
