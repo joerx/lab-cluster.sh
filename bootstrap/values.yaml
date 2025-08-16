@@ -1,6 +1,5 @@
 autosync:
-  enabled: true
-  prune: 
+  enabled: false
 
 source:
   targetRevision: main

@@ -130,7 +130,7 @@ metadata:
 spec:
   project: bootstrap
   source:
-    path: bootstrap/argocd
+    path: bootstrap
     repoURL: '$REPO_URL'
     targetRevision: '$TARGET_REVISION'
     helm:

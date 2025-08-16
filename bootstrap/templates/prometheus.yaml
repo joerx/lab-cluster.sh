@@ -19,5 +19,9 @@ spec:
     server: "https://kubernetes.default.svc"
     namespace: monitoring
   syncPolicy:
+    {{- if .Values.autosync.enabled }}
+    automated:
+      prune: true
+    {{- end }}
     syncOptions:
       - CreateNamespace=true
