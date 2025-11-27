@@ -5,8 +5,8 @@
 
 set -e -o pipefail
 
-KUBECONFIG=""
-KUBECTX=""
+MY_KUBECTX=""
+MY_KUBECONFIG=""
 NAMESPACE="argocd"
 KEY_FILE="$HOME/.ssh/id_ed25519"
 REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
@@ -21,11 +21,11 @@ log() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --kubecfg)
-      KUBECONFIG="$2"
+      MY_KUBECONFIG="$2"
       shift 2
       ;;
     --context)
-      KUBECTX="$2"
+      MY_KUBECTX="$2"
       shift 2
       ;;
     --ssh-key)
@@ -55,22 +55,23 @@ fi
 
 # Set kubernetes config and context if provided
 
-if [[ ! -z "$KUBECONFIG" ]]; then
-  log "Using kube config $KUBECTX"
-  export KUBECONFIG
+if [[ ! -z "$MY_KUBECONFIG" ]]; then
+  log "Using kube config $MY_KUBECONFIG"
+  export KUBECONFIG=$MY_KUBECONFIG
 fi
 
-if [[ ! -z "$KUBECTX" ]]; then
-  kubectl config use-context "$KUBECTX"
+if [[ ! -z "$MY_KUBECTX" ]]; then
+  kubectl config use-context "$MY_KUBECTX"
 else
-  KUBECTX=$(kubectl config current-context)
-  log "Using current context: $KUBECTX"
+  log "Using default kubectl context"
 fi
+
 
 # Check if ArgoCD is already installed, skip installation if it is
 if kubectl get namespace $NAMESPACE >/dev/null 2>&1; then
   log "ArgoCD is already installed in namespace '$NAMESPACE'. Skipping installation."
 else
+  log "Installing ArgoCD in namespace '$NAMESPACE'..."
   kubectl create namespace $NAMESPACE
   kubectl apply -n $NAMESPACE -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 fi
@@ -78,7 +79,7 @@ fi
 # Wait until we have at least one pod running
 # Might be better to wait for the argocd-server pod specifically, but this is simpler
 log "Waiting for ArgoCD server to be ready..."
-kubectl -n $NAMESPACE wait deploy argocd-server --for jsonpath='{.status.availableReplicas}=1' --timeout=60s
+kubectl -n $NAMESPACE wait deploy argocd-server --for jsonpath='{.status.availableReplicas}=1' --timeout=120s
 
 # Create a secret for the GitHub repo credentials
 # NB: kubectl apply operations are idempotent, so we can safely run them multiple times
@@ -139,6 +140,8 @@ spec:
           value: '$REPO_URL'
         - name: source.targetRevision
           value: '$TARGET_REVISION'
+        - name: autosync.enabled
+          value: "true"
   destination:
     namespace: default
     server: 'https://kubernetes.default.svc'
