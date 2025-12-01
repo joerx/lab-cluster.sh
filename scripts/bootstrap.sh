@@ -46,6 +46,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -f $PWD/.env ]]; then
+  # shellcheck disable=SC1091
+  log "Loading environment variables from $PWD/.env"
+  . "$PWD/.env"
+fi
+
 # Validate input parameters
 
 if [[ ! -f "$KEY_FILE" ]]; then
@@ -97,6 +103,18 @@ stringData:
   sshPrivateKey: |
 $(cat $KEY_FILE | sed 's/^/    /')
 EOF
+
+# TMP: Create secrets for Grafana Cloud credentials
+# We should use some external secret store for this instead
+kubectl create namespace monitoring
+
+kubectl -n monitoring create secret generic grafana-cloud-metrics-credentials \
+    --from-literal=username=$GRAFANA_CLOUD_METRICS_USERNAME \
+    --from-literal=password=$GCLOUD_KUBERNETES_RW_TOKEN
+
+kubectl -n monitoring create secret generic grafana-cloud-logs-credentials \
+    --from-literal=username=$GRAFANA_CLOUD_LOGS_USERNAME \
+    --from-literal=password=$GCLOUD_KUBERNETES_RW_TOKEN
 
 # Create a project for the bootstrap application
 # It has privileged access, so it only allows access to the bootstrap repo
