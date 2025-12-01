@@ -6,9 +6,9 @@ metadata:
 spec:
   project: bootstrap
   sources:
-    - repoURL: '{{ .Values.source.repoURL }}'
-      targetRevision: '{{ .Values.source.targetRevision }}'
-      path: manifests/alloy
+    # - repoURL: '{{ .Values.source.repoURL }}'
+    #   targetRevision: '{{ .Values.source.targetRevision }}'
+    #   path: manifests/alloy
     - repoURL: 'https://grafana.github.io/helm-charts'
       chart: k8s-monitoring
       targetRevision: 3.6.1
