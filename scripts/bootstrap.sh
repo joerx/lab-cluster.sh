@@ -106,15 +106,20 @@ EOF
 
 # TMP: Create secrets for Grafana Cloud credentials
 # We should use some external secret store for this instead
-kubectl create namespace monitoring
 
-kubectl -n monitoring create secret generic grafana-cloud-metrics-credentials \
-    --from-literal=username=$GRAFANA_CLOUD_METRICS_USERNAME \
-    --from-literal=password=$GCLOUD_KUBERNETES_RW_TOKEN
+if kubectl get namespace monitoring >/dev/null 2>&1; then
+  log "Namespace 'monitoring' already exists. Skipping Grafana Cloud credentials creation."
+else
+  kubectl create namespace monitoring
 
-kubectl -n monitoring create secret generic grafana-cloud-logs-credentials \
-    --from-literal=username=$GRAFANA_CLOUD_LOGS_USERNAME \
-    --from-literal=password=$GCLOUD_KUBERNETES_RW_TOKEN
+  kubectl -n monitoring create secret generic grafana-cloud-metrics-credentials \
+      --from-literal=username="$GRAFANA_CLOUD_METRICS_USERNAME" \
+      --from-literal=password="$GCLOUD_KUBERNETES_RW_TOKEN"
+
+  kubectl -n monitoring create secret generic grafana-cloud-logs-credentials \
+      --from-literal=username="$GRAFANA_CLOUD_LOGS_USERNAME" \
+      --from-literal=password="$GCLOUD_KUBERNETES_RW_TOKEN"
+fi
 
 # Create a project for the bootstrap application
 # It has privileged access, so it only allows access to the bootstrap repo
