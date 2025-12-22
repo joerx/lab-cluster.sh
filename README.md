@@ -64,3 +64,19 @@ Note that `k3d` will update your default kubeconfig file, so the bootstrap comma
 ```sh
 ./scripts/bootstrap.sh --context k3d-k3s-default
 ```
+
+### ArgoCD Access
+
+To get the ArgoCD admin password:
+
+```sh
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+```
+
+In a new terminal window, port-forward the ArgoCD service to port `8444`:
+
+```sh
+kubectl -n argocd port-forward services/argocd-server 8444:https
+```
+
+Then open your browser at [localhost:8444](https://localhost:8444), accept the certificate error, then log in with username 'admin' and the password above.
