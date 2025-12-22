@@ -59,6 +59,20 @@ if [[ ! -f "$KEY_FILE" ]]; then
   exit 1
 fi
 
+# FIXME: Use external secrets manager for this instead
+if [[ -z "$GCLOUD_KUBERNETES_RW_TOKEN" || -z "$GRAFANA_CLOUD_METRICS_USERNAME" || -z "$GRAFANA_CLOUD_LOGS_USERNAME" ]]; then
+  log "Grafana Cloud credentials not fully set in environment variables."
+  log "Please set GCLOUD_KUBERNETES_RW_TOKEN, GRAFANA_CLOUD_METRICS_USERNAME, and GRAFANA_CLOUD_LOGS_USERNAME."
+  exit 1
+fi
+
+# FIXME: Use external secrets manager for this instead
+if [[ -z "$NGROK_API_KEY" || -z "$NGROK_AUTHTOKEN" ]]; then
+  log "ngrok credentials not fully set in environment variables."
+  log "Please set NGROK_API_KEY and NGROK_AUTHTOKEN."
+  exit 1
+fi
+
 # Set kubernetes config and context if provided
 
 if [[ ! -z "$MY_KUBECONFIG" ]]; then
@@ -121,6 +135,17 @@ else
       --from-literal=password="$GCLOUD_KUBERNETES_RW_TOKEN"
 fi
 
+# Same for ngrok credentials
+if kubectl get namespace ngrok-operator >/dev/null 2>&1; then
+  log "Namespace 'ngrok-operator' already exists. Skipping ngrok credentials creation."
+else
+  kubectl create namespace ngrok-operator
+
+  kubectl -n ngrok-operator create secret generic ngrok-operator-credentials \
+      --from-literal=API_KEY="$NGROK_API_KEY" \
+      --from-literal=AUTHTOKEN="$NGROK_AUTHTOKEN"
+fi
+
 # Create a project for the bootstrap application
 # It has privileged access, so it only allows access to the bootstrap repo
 # We may need add specific repos for helm charts later
@@ -136,6 +161,7 @@ spec:
   - 'https://kubernetes.github.io/ingress-nginx'
   - 'https://grafana.github.io/helm-charts'
   - 'https://charts.jetstack.io'
+  - 'https://ngrok.github.io/ngrok-operator'
   destinations:
   - namespace: '*'
     server: '*'
@@ -181,13 +207,13 @@ log "You can get the status of the deployed applications with:"
 log 
 log "% kubectl -n $NAMESPACE get applications"
 log
-log "To access the ArgoCD UI, run:"
-log
-log "% kubectl -n $NAMESPACE port-forward services/argocd-server 8444:https"
-log
 log "To get the ArgoCD admin password:"
 log
 log "% kubectl -n $NAMESPACE get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo"
+log
+log "To access the ArgoCD UI, run:"
+log
+log "% kubectl -n $NAMESPACE port-forward services/argocd-server 8444:https"
 log
 log "Then open your browser at https://localhost:8444 and log in with username" 
 log "'admin' and the password above."
