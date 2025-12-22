@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+spec:
+  project: bootstrap
+  source:
+    chart: cert-manager
+    repoURL: 'https://charts.jetstack.io'
+    targetRevision: v1.16.2
+    helm:
+      parameters:
+        - name: "crds.enabled"
+          value: "true"
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: cert-manager
+  syncPolicy:
+    {{- if .Values.autosync.enabled }}
+    automated:
+      prune: true
+    {{- end }}
+    syncOptions:
+      - CreateNamespace=true

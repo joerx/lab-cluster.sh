@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-ca
+  namespace: argocd
+spec:
+  project: bootstrap
+  source:
+    repoURL: '{{ .Values.source.repoURL }}'
+    targetRevision: '{{ .Values.source.targetRevision }}'
+    path: manifests/cert-manager
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: cert-manager
+  syncPolicy:
+    {{- if .Values.autosync.enabled }}
+    automated:
+      prune: true
+    {{- end }}
+    syncOptions:
+      - CreateNamespace=true

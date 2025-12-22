@@ -3,3 +3,5 @@ images/*
 
 vms/*
 !vms/.gitkeep
+
+.env

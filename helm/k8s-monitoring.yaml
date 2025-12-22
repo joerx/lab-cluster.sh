@@ -1,0 +1,48 @@
+cluster:
+  name: k3d-k3s-default
+destinations:
+  - name: grafana-cloud-metrics
+    type: prometheus
+    url: https://prometheus-prod-24-prod-eu-west-2.grafana.net./api/prom/push
+    auth:
+      type: basic
+      usernameKey: username
+      passwordKey: password
+    secret:
+      create: false
+      name: grafana-cloud-metrics-credentials
+      namespace: monitoring
+  - name: grafana-cloud-logs
+    type: loki
+    url: https://logs-prod-012.grafana.net./loki/api/v1/push
+    auth:
+      type: basic
+      usernameKey: username
+      passwordKey: password
+    secret:
+      create: false
+      name: grafana-cloud-logs-credentials
+      namespace: monitoring
+clusterMetrics:
+  enabled: true
+annotationAutodiscovery:
+  enabled: true
+clusterEvents:
+  enabled: true
+podLogs:
+  enabled: true
+integrations:
+  alloy:
+    instances:
+      - name: alloy
+        labelSelectors:
+          app.kubernetes.io/name:
+            - alloy-metrics
+            - alloy-singleton
+            - alloy-logs
+alloy-metrics:
+  enabled: true
+alloy-singleton:
+  enabled: true
+alloy-logs:
+  enabled: true

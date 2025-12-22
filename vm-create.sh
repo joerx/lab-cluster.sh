@@ -86,4 +86,8 @@ log "Getting IP address (this may take a few seconds)"
 IP_ADDR=$(./vm-addr.sh $NAME 20)
 
 log "IP for '$NAME' is '$IP_ADDR'"
-log "Run 'echo $IP_ADDR $NAME.local $NAME | sudo tee -a /etc/hosts' to add it to /etc/hosts"
+log "To add it to /etc/hosts:"
+log "echo $IP_ADDR $NAME.local $NAME | sudo tee -a /etc/hosts"
+log ""
+log "To connect:"
+log "ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" centos@192.168.122.28"
