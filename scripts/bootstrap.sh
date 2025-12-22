@@ -10,7 +10,7 @@ MY_KUBECONFIG=""
 NAMESPACE="argocd"
 KEY_FILE="$HOME/.ssh/id_ed25519"
 REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
-TARGET_REVISION=argo-bootstrap
+TARGET_REVISION=main
 
 log() {
   >&2 echo "$@"
