@@ -7,13 +7,19 @@ set -e -o pipefail
 
 MY_KUBECTX=""
 MY_KUBECONFIG=""
+NAME=""
 NAMESPACE="argocd"
 KEY_FILE="$HOME/.ssh/id_ed25519"
 REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
 TARGET_REVISION=main
+NGROK_ENABLED=false
 
 log() {
   >&2 echo "$@"
+}
+
+usage() {
+  log "Usage: $0 NAME [--kubecfg <path>] [--context <ctx>] [--ssh-key <path>] [--repo-url <url>] [--version <rev>]"
 }
 
 # Parse arguments
@@ -40,11 +46,34 @@ while [[ $# -gt 0 ]]; do
       TARGET_REVISION="$2"
       shift 2
       ;;
+    --ngrok-enabled)
+      NGROK_ENABLED="true"
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      log "Unknown option: $1"
+      shift
+      ;;
     *)
+      # First non-option positional argument is NAME; discard the rest
+      if [[ -z "$NAME" ]]; then
+        NAME="$1"
+      fi
       shift
       ;;
   esac
 done
+
+# Validate NAME positional argument (first positional only)
+if [[ -z "$NAME" ]]; then
+  log "Provide the first positional argument as NAME. Other positional arguments are ignored."
+  usage
+  exit 1
+fi
 
 if [[ -f $PWD/.env ]]; then
   # shellcheck disable=SC1091
@@ -56,7 +85,27 @@ fi
 
 if [[ ! -f "$KEY_FILE" ]]; then
   log "SSH private key not found at $KEY_FILE. Please generate an SSH key pair to use with GitHub."
+  usage
   exit 1
+fi
+
+# FIXME: Use external secrets manager for this instead
+if [[ -z "$GCLOUD_KUBERNETES_RW_TOKEN" || -z "$GRAFANA_CLOUD_METRICS_USERNAME" || -z "$GRAFANA_CLOUD_LOGS_USERNAME" ]]; then
+  log "Grafana Cloud credentials not fully set in environment variables."
+  log "Please set GCLOUD_KUBERNETES_RW_TOKEN, GRAFANA_CLOUD_METRICS_USERNAME, and GRAFANA_CLOUD_LOGS_USERNAME."
+  exit 1
+fi
+
+if [[ "$NGROK_ENABLED" == "true" ]]; then
+  log "ngrok integration enabled."
+  # FIXME: Use external secrets manager for this instead
+  if [[ -z "$NGROK_API_KEY" || -z "$NGROK_AUTHTOKEN" ]]; then
+    log "ngrok credentials not fully set in environment variables."
+    log "Please set NGROK_API_KEY and NGROK_AUTHTOKEN."
+    exit 1
+  fi
+else
+  log "ngrok integration not enabled. To enable it, rerun with --ngrok-enabled"
 fi
 
 # Set kubernetes config and context if provided
@@ -121,6 +170,24 @@ else
       --from-literal=password="$GCLOUD_KUBERNETES_RW_TOKEN"
 fi
 
+# Same for ngrok credentials
+if kubectl get namespace ngrok-operator >/dev/null 2>&1; then
+  log "Namespace 'ngrok-operator' already exists"
+else
+  kubectl create namespace ngrok-operator
+fi
+
+kubectl apply -f -<<EOF
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: ngrok-operator-credentials
+    namespace: ngrok-operator
+  data:
+    API_KEY: "$(echo -n "$NGROK_API_KEY" | base64)"
+    AUTHTOKEN: "$(echo -n "$NGROK_AUTHTOKEN" | base64)"
+EOF
+
 # Create a project for the bootstrap application
 # It has privileged access, so it only allows access to the bootstrap repo
 # We may need add specific repos for helm charts later
@@ -136,6 +203,7 @@ spec:
   - 'https://kubernetes.github.io/ingress-nginx'
   - 'https://grafana.github.io/helm-charts'
   - 'https://charts.jetstack.io'
+  - 'https://ngrok.github.io/ngrok-operator'
   destinations:
   - namespace: '*'
     server: '*'
@@ -158,13 +226,16 @@ spec:
     repoURL: '$REPO_URL'
     targetRevision: '$TARGET_REVISION'
     helm:
-      parameters:
-        - name: source.repoURL
-          value: '$REPO_URL'
-        - name: source.targetRevision
-          value: '$TARGET_REVISION'
-        - name: autosync.enabled
-          value: "true"
+      valuesObject:
+        metadata:
+          clusterName: '$NAME'
+        ngrok:
+          enabled: $NGROK_ENABLED
+        source:
+          repoUrl: '$REPO_URL'
+          targetRevision: '$TARGET_REVISION'
+        autosync:
+          enabled: true
   destination:
     namespace: default
     server: 'https://kubernetes.default.svc'
@@ -181,13 +252,13 @@ log "You can get the status of the deployed applications with:"
 log 
 log "% kubectl -n $NAMESPACE get applications"
 log
-log "To access the ArgoCD UI, run:"
-log
-log "% kubectl -n $NAMESPACE port-forward services/argocd-server 8444:https"
-log
 log "To get the ArgoCD admin password:"
 log
 log "% kubectl -n $NAMESPACE get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo"
+log
+log "To access the ArgoCD UI, run:"
+log
+log "% kubectl -n $NAMESPACE port-forward services/argocd-server 8444:https"
 log
 log "Then open your browser at https://localhost:8444 and log in with username" 
 log "'admin' and the password above."
