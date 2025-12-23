@@ -1,6 +1,8 @@
 # lab-cluster.sh
 
-Collection of shell scripts to manage k3s lab clusters running various lightweight Kubernetes providers. This should be relatively distribution agnostic, but I am only testing on [k3s](https://k3s.io/) [k3d](https://k3d.io/stable/) so far.  This is more of an exercise for me than an attempt to build something useful for the general public. Leaving this here in case it is of any use to anyone.
+Collection of shell scripts to manage k3s lab clusters running various lightweight Kubernetes providers. This should be relatively distribution agnostic, but I am only testing on [k3s](https://k3s.io/) [k3d](https://k3d.io/stable/) so far. 
+
+This is more of an exercise for me than an attempt to build something useful for the general public. Leaving this here in case it is of any use to anyone.
 
 Use cases:
 
@@ -74,7 +76,7 @@ For a VM-based cluster, point `--kubecfg` to the kubernetes config file created 
 ./scripts/bootstrap.sh --kubecfg $PWD/vms/k3s-lab/.kubecfg
 ```
 
-Creation a cluster using k3d will update your default kubeconfig file, so the bootstrap command must be:
+Creating a cluster using k3d will update your default kubeconfig file, so the bootstrap command must be:
 
 ```sh
 ./scripts/bootstrap.sh --context k3d-k3s-default
@@ -124,14 +126,14 @@ This [sample app](https://ngrok.com/docs/getting-started/kubernetes/ingress#3-de
 
 **Important: Ngrok Resource Cleanup**
 
-The ngrok operator uses a finaliser to clean up the Ngrok Operator resources registered in the backend. When destroying a cluster the finaliser may not be able to run and the operators in the [dashboard](https://dashboard.ngrok.com/kubernetes-operators) will get orphaned. We are intentionally _not_ attempting to clean them up as part of cluster deprovisioning[^1]. 
+The ngrok operator uses a finaliser to clean up the Ngrok Operator resources registered in the backend. When destroying a cluster the finaliser may not be able to run and the operators in the [dashboard](https://dashboard.ngrok.com/kubernetes-operators) will get orphaned. We are intentionally _not_ attempting to clean them up as part of cluster deprovisioning [^1]. 
 
-To periodically clean dangling endpoints (NB: This will delete ALL registered operators in your account[^2]): 
+To periodically clean dangling endpoints (NB: This will delete ALL registered operators in your account [^2]): 
 
 ```
 ./scripts/misc/ngrok-cleanup.sh
 ```
 
-[1]: Doing so would leak problematic behaviour of a 3rd party operator into our toolchain and create complex, brittle code to maintain. The long-term maintenance drag is ultimately not worth the short term convenience gained.
+[^1]: Doing so would leak problematic behaviour of a 3rd party operator into our toolchain and create complex, brittle code to maintain. The long-term maintenance drag is ultimately not worth the short term convenience gained.
 
-[2]: Haven't found a way to label or tag the remote resources in any predictable way yet, so for now make sure to use a dedicated account for dev
+[^2]: Haven't found a way to label or tag the remote resources in any predictable way yet, so for now make sure to use a dedicated account for dev
