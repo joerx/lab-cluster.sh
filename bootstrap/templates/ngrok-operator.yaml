@@ -1,3 +1,4 @@
+{{- if .Values.ngrok.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -12,12 +13,11 @@ spec:
       helm:
         releaseName: ngrok-operator
         valuesObject:
+          description: "ngrok operator deployment for cluster {{ .Values.metadata.clusterName }}"
           credentials:
             secret:
               name: ngrok-operator-credentials
-          ngrokMetadata:
-            environment: dev
-            retention: 24h
+          
   destination:
     server: "https://kubernetes.default.svc"
     namespace: ngrok-operator
@@ -28,3 +28,4 @@ spec:
     {{- end }}
     syncOptions:
       - CreateNamespace=true
+{{- end }}
