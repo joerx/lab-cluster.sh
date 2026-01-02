@@ -17,7 +17,9 @@ spec:
           credentials:
             secret:
               name: ngrok-operator-credentials
-          
+    - repoURL: '{{ .Values.source.repoURL }}'
+      targetRevision: '{{ .Values.source.targetRevision }}'
+      path: manifests/ngrok
   destination:
     server: "https://kubernetes.default.svc"
     namespace: ngrok-operator
