@@ -228,6 +228,7 @@ spec:
   - 'https://grafana.github.io/helm-charts'
   - 'https://charts.jetstack.io'
   - 'https://ngrok.github.io/ngrok-operator'
+  - 'https://charts.external-secrets.io'
   destinations:
   - namespace: '*'
     server: '*'
