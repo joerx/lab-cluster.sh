@@ -89,12 +89,20 @@ if [[ ! -f "$KEY_FILE" ]]; then
   exit 1
 fi
 
+# Secret Zero: All other secrets are stored in Infisical and will be retrieved using ESO
+if [[ -z "$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID" || -z "$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" ]]; then
+  log "Infisical Universal Auth credentials not fully set in environment variables."
+  log "Please set INFISICAL_UNIVERSAL_AUTH_CLIENT_ID and INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET."
+  exit 1
+fi
+
 # FIXME: Use external secrets manager for this instead
 if [[ -z "$GCLOUD_KUBERNETES_RW_TOKEN" || -z "$GRAFANA_CLOUD_METRICS_USERNAME" || -z "$GRAFANA_CLOUD_LOGS_USERNAME" ]]; then
   log "Grafana Cloud credentials not fully set in environment variables."
   log "Please set GCLOUD_KUBERNETES_RW_TOKEN, GRAFANA_CLOUD_METRICS_USERNAME, and GRAFANA_CLOUD_LOGS_USERNAME."
   exit 1
 fi
+
 
 if [[ "$NGROK_ENABLED" == "true" ]]; then
   log "ngrok integration enabled."
@@ -120,7 +128,6 @@ if [[ ! -z "$MY_KUBECTX" ]]; then
 else
   log "Using default kubectl context"
 fi
-
 
 # Check if ArgoCD is already installed, skip installation if it is
 if kubectl get namespace $NAMESPACE >/dev/null 2>&1; then
@@ -151,6 +158,21 @@ stringData:
   url: '$REPO_URL'
   sshPrivateKey: |
 $(cat $KEY_FILE | sed 's/^/    /')
+EOF
+
+if kubectl get namespace external-secrets >/dev/null 2>&1; then
+  kubectl create namespace external-secrets
+fi
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: universal-auth-credentials
+  namespace: external-secrets
+stringData:
+  clientId: ${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}
+  clientSecret: ${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}
 EOF
 
 # TMP: Create secrets for Grafana Cloud credentials
