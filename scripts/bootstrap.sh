@@ -160,11 +160,13 @@ stringData:
 $(cat $KEY_FILE | sed 's/^/    /')
 EOF
 
-if kubectl get namespace external-secrets >/dev/null 2>&1; then
-  kubectl create namespace external-secrets
-fi
-
 cat <<EOF | kubectl apply -f -
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-secrets
+---
 apiVersion: v1
 kind: Secret
 metadata:
