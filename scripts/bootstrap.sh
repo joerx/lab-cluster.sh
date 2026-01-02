@@ -82,34 +82,20 @@ if [[ -f $PWD/.env ]]; then
 fi
 
 # Validate input parameters
-
 if [[ ! -f "$KEY_FILE" ]]; then
   log "SSH private key not found at $KEY_FILE. Please generate an SSH key pair to use with GitHub."
   usage
   exit 1
 fi
 
-# FIXME: Use external secrets manager for this instead
-if [[ -z "$GCLOUD_KUBERNETES_RW_TOKEN" || -z "$GRAFANA_CLOUD_METRICS_USERNAME" || -z "$GRAFANA_CLOUD_LOGS_USERNAME" ]]; then
-  log "Grafana Cloud credentials not fully set in environment variables."
-  log "Please set GCLOUD_KUBERNETES_RW_TOKEN, GRAFANA_CLOUD_METRICS_USERNAME, and GRAFANA_CLOUD_LOGS_USERNAME."
+# Secret Zero: All other secrets are stored in Infisical and will be retrieved using ESO
+if [[ -z "$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID" || -z "$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" ]]; then
+  log "Infisical Universal Auth credentials not fully set in environment variables."
+  log "Please set INFISICAL_UNIVERSAL_AUTH_CLIENT_ID and INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET."
   exit 1
 fi
 
-if [[ "$NGROK_ENABLED" == "true" ]]; then
-  log "ngrok integration enabled."
-  # FIXME: Use external secrets manager for this instead
-  if [[ -z "$NGROK_API_KEY" || -z "$NGROK_AUTHTOKEN" ]]; then
-    log "ngrok credentials not fully set in environment variables."
-    log "Please set NGROK_API_KEY and NGROK_AUTHTOKEN."
-    exit 1
-  fi
-else
-  log "ngrok integration not enabled. To enable it, rerun with --ngrok-enabled"
-fi
-
 # Set kubernetes config and context if provided
-
 if [[ ! -z "$MY_KUBECONFIG" ]]; then
   log "Using kube config $MY_KUBECONFIG"
   export KUBECONFIG=$MY_KUBECONFIG
@@ -120,7 +106,6 @@ if [[ ! -z "$MY_KUBECTX" ]]; then
 else
   log "Using default kubectl context"
 fi
-
 
 # Check if ArgoCD is already installed, skip installation if it is
 if kubectl get namespace $NAMESPACE >/dev/null 2>&1; then
@@ -136,8 +121,8 @@ fi
 log "Waiting for ArgoCD server to be ready..."
 kubectl -n $NAMESPACE wait deploy argocd-server --for jsonpath='{.status.availableReplicas}=1' --timeout=120s
 
-# Create a secret for the GitHub repo credentials
-# NB: kubectl apply operations are idempotent, so we can safely run them multiple times
+# Create a secret for the GitHub repo credentials - we need to do this before we sync,
+# so we can't use External Secrets for this one
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: Secret
@@ -153,39 +138,21 @@ stringData:
 $(cat $KEY_FILE | sed 's/^/    /')
 EOF
 
-# TMP: Create secrets for Grafana Cloud credentials
-# We should use some external secret store for this instead
-
-if kubectl get namespace monitoring >/dev/null 2>&1; then
-  log "Namespace 'monitoring' already exists. Skipping Grafana Cloud credentials creation."
-else
-  kubectl create namespace monitoring
-
-  kubectl -n monitoring create secret generic grafana-cloud-metrics-credentials \
-      --from-literal=username="$GRAFANA_CLOUD_METRICS_USERNAME" \
-      --from-literal=password="$GCLOUD_KUBERNETES_RW_TOKEN"
-
-  kubectl -n monitoring create secret generic grafana-cloud-logs-credentials \
-      --from-literal=username="$GRAFANA_CLOUD_LOGS_USERNAME" \
-      --from-literal=password="$GCLOUD_KUBERNETES_RW_TOKEN"
-fi
-
-# Same for ngrok credentials
-if kubectl get namespace ngrok-operator >/dev/null 2>&1; then
-  log "Namespace 'ngrok-operator' already exists"
-else
-  kubectl create namespace ngrok-operator
-fi
-
-kubectl apply -f -<<EOF
-  apiVersion: v1
-  kind: Secret
-  metadata:
-    name: ngrok-operator-credentials
-    namespace: ngrok-operator
-  data:
-    API_KEY: "$(echo -n "$NGROK_API_KEY" | base64)"
-    AUTHTOKEN: "$(echo -n "$NGROK_AUTHTOKEN" | base64)"
+cat <<EOF | kubectl apply -f -
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-secrets
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: universal-auth-credentials
+  namespace: external-secrets
+stringData:
+  clientId: ${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}
+  clientSecret: ${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}
 EOF
 
 # Create a project for the bootstrap application
@@ -204,6 +171,7 @@ spec:
   - 'https://grafana.github.io/helm-charts'
   - 'https://charts.jetstack.io'
   - 'https://ngrok.github.io/ngrok-operator'
+  - 'https://charts.external-secrets.io'
   destinations:
   - namespace: '*'
     server: '*'
