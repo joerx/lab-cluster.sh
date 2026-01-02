@@ -82,7 +82,6 @@ if [[ -f $PWD/.env ]]; then
 fi
 
 # Validate input parameters
-
 if [[ ! -f "$KEY_FILE" ]]; then
   log "SSH private key not found at $KEY_FILE. Please generate an SSH key pair to use with GitHub."
   usage
@@ -96,28 +95,7 @@ if [[ -z "$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID" || -z "$INFISICAL_UNIVERSAL_AUTH_
   exit 1
 fi
 
-# # FIXME: Use external secrets manager for this instead
-# if [[ -z "$GCLOUD_KUBERNETES_RW_TOKEN" || -z "$GRAFANA_CLOUD_METRICS_USERNAME" || -z "$GRAFANA_CLOUD_LOGS_USERNAME" ]]; then
-#   log "Grafana Cloud credentials not fully set in environment variables."
-#   log "Please set GCLOUD_KUBERNETES_RW_TOKEN, GRAFANA_CLOUD_METRICS_USERNAME, and GRAFANA_CLOUD_LOGS_USERNAME."
-#   exit 1
-# fi
-
-
-# if [[ "$NGROK_ENABLED" == "true" ]]; then
-#   log "ngrok integration enabled."
-#   # FIXME: Use external secrets manager for this instead
-#   if [[ -z "$NGROK_API_KEY" || -z "$NGROK_AUTHTOKEN" ]]; then
-#     log "ngrok credentials not fully set in environment variables."
-#     log "Please set NGROK_API_KEY and NGROK_AUTHTOKEN."
-#     exit 1
-#   fi
-# else
-#   log "ngrok integration not enabled. To enable it, rerun with --ngrok-enabled"
-# fi
-
 # Set kubernetes config and context if provided
-
 if [[ ! -z "$MY_KUBECONFIG" ]]; then
   log "Using kube config $MY_KUBECONFIG"
   export KUBECONFIG=$MY_KUBECONFIG
@@ -176,24 +154,6 @@ stringData:
   clientId: ${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}
   clientSecret: ${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}
 EOF
-
-# # Same for ngrok credentials
-# if kubectl get namespace ngrok-operator >/dev/null 2>&1; then
-#   log "Namespace 'ngrok-operator' already exists"
-# else
-#   kubectl create namespace ngrok-operator
-# fi
-
-# kubectl apply -f -<<EOF
-#   apiVersion: v1
-#   kind: Secret
-#   metadata:
-#     name: ngrok-operator-credentials
-#     namespace: ngrok-operator
-#   data:
-#     API_KEY: "$(echo -n "$NGROK_API_KEY" | base64)"
-#     AUTHTOKEN: "$(echo -n "$NGROK_AUTHTOKEN" | base64)"
-# EOF
 
 # Create a project for the bootstrap application
 # It has privileged access, so it only allows access to the bootstrap repo
