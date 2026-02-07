@@ -1,5 +1,3 @@
-cluster:
-  name: k3d-k3s-default
 destinations:
   - name: grafana-cloud-metrics
     type: prometheus

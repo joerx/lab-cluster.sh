@@ -11,7 +11,10 @@ spec:
       targetRevision: 3.6.1
       helm:
         valueFiles:
-        - $values/helm/k8s-monitoring.yaml
+          - $values/helm/k8s-monitoring.yaml
+        valuesObject:
+          cluster:
+            name: '{{ .Values.cluster.name }}'
     - repoURL: '{{ .Values.source.repoURL }}'
       targetRevision: '{{ .Values.source.targetRevision }}'
       path: manifests/k8s-monitoring
@@ -28,3 +31,4 @@ spec:
     {{- end }}
     syncOptions:
       - CreateNamespace=true
+  

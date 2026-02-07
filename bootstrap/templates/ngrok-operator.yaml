@@ -13,7 +13,7 @@ spec:
       helm:
         releaseName: ngrok-operator
         valuesObject:
-          description: "ngrok operator deployment for cluster {{ .Values.metadata.clusterName }}"
+          description: "ngrok operator deployment for cluster {{ .Values.cluster.name }}"
           credentials:
             secret:
               name: ngrok-operator-credentials
