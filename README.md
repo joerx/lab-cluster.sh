@@ -1,6 +1,6 @@
 # lab-cluster.sh
 
-Collection of shell scripts to manage k3s lab clusters running various lightweight Kubernetes providers. This should be relatively distribution agnostic, but I am only testing on [k3s](https://k3s.io/) [k3d](https://k3d.io/stable/) so far. 
+Collection of shell scripts to manage k3s lab clusters running various lightweight Kubernetes providers. This should be relatively distribution agnostic, but I am only testing on [k3s](https://k3s.io/) and [k3d](https://k3d.io/stable/) so far. 
 
 This is more of an exercise for me than an attempt to build something useful for the general public. Leaving this here in case it is of any use to anyone.
 
@@ -31,16 +31,18 @@ Basically `k3s` but running on Docker. More lightweight and easier to stand up t
 
 Start a development VM using `libvirt` on a Linux host. Useful when developing base images and cluster bootstrap scripts or to fully isolate the k8s control plane from the host operating system.
 
-Preconditions:
+We need a functioning setup of [KVM, QEMU and libvirt](https://joshrosso.com/docs/2020/2020-05-06-linux-hypervisor-setup/).
 
-- Functioning setup of [KVM, QEMU and libvirt](https://joshrosso.com/docs/2020/2020-05-06-linux-hypervisor-setup/)
-- Tested only for `centos-stream9`
-- To download the base image:
+
+Fedora 
 
 ```sh
-ARCH=$(uname -m)
-curl https://cloud.centos.org/centos/9-stream/${ARCH}/images/CentOS-Stream-GenericCloud-9-latest.${ARCH}.qcow2 -o images/centos-stream9.${ARCH}.qcow2
+sudo dnf install @virtualization genisoimage
+sudo systemctl enable libvirtd --now
 ```
+
+- Tested only for `centos-stream9`
+- If image is not found locally it will be downloaded from [CentOS Cloud Images](https://cloud.centos.org/centos/)
 
 Create VM:
 
@@ -68,18 +70,32 @@ Destroy VM (Will delete all data):
 
 ## Bootstrapping
 
-This will install ArgoCD which will then bootstrap the cluster. This should be relatively cluster-agnostic. However, it has only been tested with k3d/k3s for now. The exact flags to pass into `bootstrap.sh` depend on the way the cluster was provisioned:
+This will install ArgoCD which will then bootstrap the cluster. This should be relatively cluster-agnostic. However, it has only been tested with k3d/k3s for now. The exact flags to pass into `bootstrap.sh` depend on the cluster connection details
+
+The default will use whatever current `KUBECONFIG` and context are active:
+
+```sh
+./scripts/bootstrap.sh
+```
+
+By default this will only install ArgoCD and sync the initial ArgoCD bootstrap application and its dependencies for cert manager, Alloy, etc., but it will not sync those dependencies automatically. 
+
+To enable auto-sync use the `--auto-sync` flag - This can also be turned on/off retroactively:
+
+```sh
+./scripts/bootstrap.sh --auto-sync
+```
 
 For a VM-based cluster, point `--kubecfg` to the kubernetes config file created as part of cluster creation:
 
 ```sh
-./scripts/bootstrap.sh --kubecfg $PWD/vms/k3s-lab/.kubecfg
+./scripts/bootstrap.sh --kubecfg $PWD/vms/k3s-lab/.kubecfg --auto-sync
 ```
 
 Creating a cluster using k3d will update your default kubeconfig file, so the bootstrap command must be:
 
 ```sh
-./scripts/bootstrap.sh --context k3d-k3s-default
+./scripts/bootstrap.sh --context k3d-k3s-default --auto-sync
 ```
 
 ### ArgoCD Access

@@ -13,6 +13,7 @@ KEY_FILE="$HOME/.ssh/id_ed25519"
 REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
 TARGET_REVISION=main
 NGROK_ENABLED=false
+AUTO_SYNC=false
 
 log() {
   >&2 echo "$@"
@@ -50,6 +51,10 @@ while [[ $# -gt 0 ]]; do
       NGROK_ENABLED="true"
       shift
       ;;
+    --auto-sync)
+      AUTO_SYNC="true"
+      shift
+      ;;
     --)
       shift
       break
@@ -68,12 +73,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Validate NAME positional argument (first positional only)
-if [[ -z "$NAME" ]]; then
-  log "Provide the first positional argument as NAME. Other positional arguments are ignored."
-  usage
-  exit 1
-fi
+NAME=${NAME:-"k3s-lab-$(hostname)"}
+
+log "Bootstrapping cluster '$NAME"
 
 if [[ -f $PWD/.env ]]; then
   # shellcheck disable=SC1091
@@ -113,7 +115,7 @@ if kubectl get namespace $NAMESPACE >/dev/null 2>&1; then
 else
   log "Installing ArgoCD in namespace '$NAMESPACE'..."
   kubectl create namespace $NAMESPACE
-  kubectl apply -n $NAMESPACE -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+  kubectl apply -n $NAMESPACE -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --server-side --force-conflicts
 fi
 
 # Wait until we have at least one pod running
@@ -157,7 +159,7 @@ EOF
 
 # Create a project for the bootstrap application
 # It has privileged access, so it only allows access to the bootstrap repo
-# We may need add specific repos for helm charts later
+# We need to add any 3rd party repos used during the bootstrap process here as well
 cat <<EOF | kubectl apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
@@ -195,15 +197,15 @@ spec:
     targetRevision: '$TARGET_REVISION'
     helm:
       valuesObject:
-        metadata:
-          clusterName: '$NAME'
+        cluster:
+          name: '$NAME'
         ngrok:
           enabled: $NGROK_ENABLED
         source:
           repoUrl: '$REPO_URL'
           targetRevision: '$TARGET_REVISION'
         autosync:
-          enabled: true
+          enabled: $AUTO_SYNC
   destination:
     namespace: default
     server: 'https://kubernetes.default.svc'
