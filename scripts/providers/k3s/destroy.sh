@@ -2,27 +2,23 @@
 
 set -e -o pipefail
 
-NAME=$1
-
-VMDIR=vms/$NAME
-
-
 usage() {
   >&2 echo "Usage: $0 <name>"
   exit 1
 }
 
+NAME=${1:-"k3s-lab-$(hostname)"}
 
-if [[ -z "$NAME" ]]; then
-  usage
-fi
+BASEDIR=$(dirname $0)
+IMGDIR=$(realpath $BASEDIR/../../../images)
+VMDIR=$(realpath $BASEDIR/.vms)/$NAME
 
 if [[ ! -d $VMDIR ]]; then
   echo "VM '$NAME' not found, use vm-create.sh to create it."
   exit 1
 fi
 
-echo "This will destroy the VM and all data on it. Continue? (Ctrl-C to abort)"
+echo "This will destroy the VM '$NAME' and all data on it. Continue? (Ctrl-C to abort)"
 read
 
 virsh destroy $NAME || >&2 echo "...ignoring"
