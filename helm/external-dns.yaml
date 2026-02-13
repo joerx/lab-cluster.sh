@@ -1,0 +1,8 @@
+provider:
+  name: linode
+env:
+  - name: LINODE_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: linode-token
+        key: LINODE_TOKEN
