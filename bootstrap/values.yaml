@@ -10,3 +10,6 @@ metadata:
 
 ngrok:
   enabled: false
+
+externalDNS:
+  enabled: false
