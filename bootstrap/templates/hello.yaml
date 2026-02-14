@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-world
+  namespace: argocd
+spec:
+  project: bootstrap
+  source:
+    repoURL: '{{ .Values.source.repoURL }}'
+    targetRevision: '{{ .Values.source.targetRevision }}'
+    path: manifests/examples/hello-world
+    helm:
+      valuesObject:
+        # How we resolve this is up to the user, optionally they may enable external-dns or manually manage /etc/hosts entries
+        # Even if external-dns is not enabled, we still need a hostname for ingress, so we always use the cluster domain here
+        ingress:
+          host: 'echo.{{ .Values.cluster.domain }}'
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: cert-manager
+  syncPolicy:
+    {{- if .Values.autosync.enabled }}
+    automated:
+      prune: true
+    {{- end }}
+    syncOptions:
+      - CreateNamespace=true

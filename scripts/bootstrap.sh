@@ -14,6 +14,7 @@ REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
 TARGET_REVISION=main
 NGROK_ENABLED=false
 AUTO_SYNC=false
+EXTERNAL_DNS_ENABLED=false
 
 log() {
   >&2 echo "$@"
@@ -47,8 +48,12 @@ while [[ $# -gt 0 ]]; do
       TARGET_REVISION="$2"
       shift 2
       ;;
-    --ngrok-enabled)
+    --ngrok)
       NGROK_ENABLED="true"
+      shift
+      ;;
+    --external-dns)
+      EXTERNAL_DNS_ENABLED="true"
       shift
       ;;
     --auto-sync)
@@ -174,6 +179,7 @@ spec:
   - 'https://charts.jetstack.io'
   - 'https://ngrok.github.io/ngrok-operator'
   - 'https://charts.external-secrets.io'
+  - 'https://kubernetes-sigs.github.io/external-dns/'
   destinations:
   - namespace: '*'
     server: '*'
@@ -201,6 +207,8 @@ spec:
           name: '$NAME'
         ngrok:
           enabled: $NGROK_ENABLED
+        externalDNS:
+          enabled: $EXTERNAL_DNS_ENABLED
         source:
           repoUrl: '$REPO_URL'
           targetRevision: '$TARGET_REVISION'

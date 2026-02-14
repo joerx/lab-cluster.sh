@@ -5,8 +5,9 @@ source:
   targetRevision: main
   repoURL: git@github.com:joerx/lab-cluster.sh.git
 
-metadata:
-  clusterName: my-cluster
+cluster:
+  name: my-cluster
+  domain: my-cluster.local
 
 ngrok:
   enabled: false
