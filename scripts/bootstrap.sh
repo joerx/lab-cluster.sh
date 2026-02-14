@@ -15,6 +15,7 @@ TARGET_REVISION=main
 NGROK_ENABLED=false
 AUTO_SYNC=false
 EXTERNAL_DNS_ENABLED=false
+DOMAIN=""
 
 log() {
   >&2 echo "$@"
@@ -52,6 +53,10 @@ while [[ $# -gt 0 ]]; do
       NGROK_ENABLED="true"
       shift
       ;;
+    --domain)
+      DOMAIN="$2"
+      shift 2
+      ;;
     --external-dns)
       EXTERNAL_DNS_ENABLED="true"
       shift
@@ -79,8 +84,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 NAME=${NAME:-"k3s-lab-$(hostname)"}
+DOMAIN=${DOMAIN:-"$NAME.local"}
 
-log "Bootstrapping cluster '$NAME"
+log "Bootstrapping cluster '$NAME'"
+log "- Repo URL: $REPO_URL"
+log "- Target revision: $TARGET_REVISION"
+log "- Domain: $DOMAIN"
 
 if [[ -f $PWD/.env ]]; then
   # shellcheck disable=SC1091
@@ -205,6 +214,7 @@ spec:
       valuesObject:
         cluster:
           name: '$NAME'
+          domain: '$DOMAIN'
         ngrok:
           enabled: $NGROK_ENABLED
         externalDNS:
