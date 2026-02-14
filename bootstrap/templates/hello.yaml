@@ -17,11 +17,9 @@ spec:
           host: 'echo.{{ .Values.cluster.domain }}'
   destination:
     server: "https://kubernetes.default.svc"
-    namespace: cert-manager
+    namespace: default
   syncPolicy:
     {{- if .Values.autosync.enabled }}
     automated:
       prune: true
     {{- end }}
-    syncOptions:
-      - CreateNamespace=true
