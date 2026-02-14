@@ -5,6 +5,11 @@
 
 set -e -o pipefail
 
+# Confuguration precedence:
+# 1. Default values in this script
+# 2. Values from .env file in the same directory as this script (it exists)
+# 3. Flags explicitly passed to this script
+
 MY_KUBECTX=""
 MY_KUBECONFIG=""
 NAME=""
@@ -15,7 +20,9 @@ TARGET_REVISION=main
 NGROK_ENABLED=false
 AUTO_SYNC=false
 EXTERNAL_DNS_ENABLED=false
+INFISICAL_PROJECT="example-project"
 DOMAIN=""
+
 
 log() {
   >&2 echo "$@"
@@ -25,8 +32,14 @@ usage() {
   log "Usage: $0 NAME [--kubecfg <path>] [--context <ctx>] [--ssh-key <path>] [--repo-url <url>] [--version <rev>]"
 }
 
-# Parse arguments
+# Load .env file if exists
+if [[ -f "$PWD/.env" ]]; then
+  # shellcheck disable=SC1091
+  log "Loading environment variables from $PWD/.env"
+  source "$PWD/.env"
+fi
 
+# Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --kubecfg)
@@ -61,6 +74,10 @@ while [[ $# -gt 0 ]]; do
       EXTERNAL_DNS_ENABLED="true"
       shift
       ;;
+    --infisical-project)
+      INFISICAL_PROJECT="$2"
+      shift 2
+      ;;
     --auto-sync)
       AUTO_SYNC="true"
       shift
@@ -90,6 +107,8 @@ log "Bootstrapping cluster '$NAME'"
 log "- Repo URL: $REPO_URL"
 log "- Target revision: $TARGET_REVISION"
 log "- Domain: $DOMAIN"
+log "- Infisical project: $INFISICAL_PROJECT"
+
 
 if [[ -f $PWD/.env ]]; then
   # shellcheck disable=SC1091
@@ -224,6 +243,8 @@ spec:
           targetRevision: '$TARGET_REVISION'
         autosync:
           enabled: $AUTO_SYNC
+        infisical:
+          project: '$INFISICAL_PROJECT'
   destination:
     namespace: default
     server: 'https://kubernetes.default.svc'

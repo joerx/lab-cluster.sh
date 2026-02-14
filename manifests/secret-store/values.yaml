@@ -3,4 +3,4 @@ cluster:
 infisical:
   endpoint: https://eu.infisical.com
   environment: dev
-  project: terraforge-u8-js
+  project: example-project
