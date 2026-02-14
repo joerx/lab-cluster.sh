@@ -17,7 +17,17 @@ Design Goals:
 - Highly automated and automatable
 - Minimal glue code, rely on platform capabilities
 
-## Usage
+## Configuration
+
+All features of this tool can be managed via commandline flags and/or environment variables. However, these can get quite long for more complex scenarios, therefore you can also place a `.env` file in the local working directly that will be sourced if it exists.
+
+```sh
+INFISICAL_PROJECT_ID=some-secret-project
+INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=...
+INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=...
+```
+
+## Local Cluster Creation
 
 ### Docker Based Cluster (k3d)
 
@@ -33,8 +43,7 @@ Start a development VM using `libvirt` on a Linux host. Useful when developing b
 
 We need a functioning setup of [KVM, QEMU and libvirt](https://joshrosso.com/docs/2020/2020-05-06-linux-hypervisor-setup/).
 
-
-Fedora 
+On Fedora: 
 
 ```sh
 sudo dnf install @virtualization genisoimage
@@ -68,37 +77,62 @@ Destroy VM (Will delete all data):
 ./vm-destroy.sh k3s-lab
 ```
 
+### Cloud Based Clusters
+
+- This tool is not designed to create cloud based clusters since there is too much variety between them
+- The [bootstrapping](#bootstrapping) components however are still designed to work on a managed cluster
+- So far I tested this only for [Linode LKE](https://techdocs.akamai.com/cloud-computing/docs/linode-kubernetes-engine) however
+- See [cloud cluster bootstrap](#cloud-based-deployment) for instructions how to bootstrap an LKE cluster
+
 ## Bootstrapping
+
+> [!WARNING]
+> The default configuration will use whatever current `KUBECONFIG` and context are active. Use `--kubecfg` or `--context` to explicitly select a different context if needed.
 
 This will install ArgoCD which will then bootstrap the cluster. This should be relatively cluster-agnostic. However, it has only been tested with k3d/k3s for now. The exact flags to pass into `bootstrap.sh` depend on the cluster connection details
 
-The default will use whatever current `KUBECONFIG` and context are active:
+### Preconditions
 
-```sh
-./scripts/bootstrap.sh
-```
+This assumes that you already have a cluster running and a working kubectl connection. Currently local development clusters like k3d or k3s and [Linode LKE](https://techdocs.akamai.com/cloud-computing/docs/linode-kubernetes-engine) based clusters are supported.
 
-By default this will only install ArgoCD and sync the initial ArgoCD bootstrap application and its dependencies for cert manager, Alloy, etc., but it will not sync those dependencies automatically. 
+### Local Deployment
 
-To enable auto-sync use the `--auto-sync` flag - This can also be turned on/off retroactively:
+If you have a local k3d or k3s cluster running, it'll bootstrap that cluster. Set `--auto-sync` to enable auto sync for all ArgoCD applications:
 
 ```sh
 ./scripts/bootstrap.sh --auto-sync
 ```
 
-For a VM-based cluster, point `--kubecfg` to the kubernetes config file created as part of cluster creation:
+The script will output instructions how to get the admin passwort and access the ArgoCD GUI.
+
+Without `--auto-sync`, this will only install ArgoCD and sync the initial ArgoCD bootstrap application and its dependencies. You will need to manually sync each app. It can also be toggled on/off retroactively.
 
 ```sh
-./scripts/bootstrap.sh --kubecfg $PWD/vms/k3s-lab/.kubecfg --auto-sync
+./scripts/bootstrap.sh 
 ```
 
-Creating a cluster using k3d will update your default kubeconfig file, so the bootstrap command must be:
+### Cloud Based Deployment
+
+To bootstrap a cluster into the cloud, only LKE is currently supported.[^3] It is up to the user to decide how to obtain a cluster in the first place and usually requires additional infra to be in place. It also requires a [secrets management](#external-secrets) backend.
+
+To bootstrap with an existing secrets backend `my-cluster-l4b` and enable external DNS:
 
 ```sh
-./scripts/bootstrap.sh --context k3d-k3s-default --auto-sync
+./scripts/bootstrap.sh --auto-sync --name my-cluster-l4b --domain my-cluster-l4b.dev.example.com --external-dns
 ```
 
-### ArgoCD Access
+### Validation
+
+When external-dns is enabled, the default configuration will deploy a demo app and a DNS record for the endpoint should be created automatically. This means you can test the end-to-end deployment by validating that endpoint:
+
+```sh
+$ curl echo.my-cluster-l4b.dev.example.com
+Hello, World!
+```
+
+For a local deployment this should work as well, but you may need to set up the host record in your local `/etc/hosts` first.
+
+## Cluster Access
 
 You can query ArgoCD applications and deployment status using `kubectl`:
 
@@ -120,6 +154,52 @@ kubectl -n argocd port-forward services/argocd-server 8444:https
 
 Open browser at [localhost:8444](https://localhost:8444), accept certificate error, log in with username 'admin' & password
 
+## Additional Options
+
+To set `--kubecfg` to the kubernetes config file created as part of cluster creation:
+
+```sh
+./scripts/bootstrap.sh --kubecfg $PWD/vms/k3s-lab/.kubecfg --auto-sync
+```
+
+To use the default `KUBECONFIG` but explicitly select a context:
+
+```sh
+./scripts/bootstrap.sh --context k3d-k3s-default --auto-sync
+```
+
+To deploy a specific branch or tag instead of `main`:
+
+```sh
+./scripts/bootstrap.sh --version my-working-branch
+```
+
+## Components
+
+### External Secrets
+
+To create the cluster secret store required to bootstrap the cluster, credentials to access the [Infisical API](https://infisical.com/docs/documentation/platform/identities/universal-auth) are required. This requires the necessary credentials to be set in the shell or `.env` file:
+
+```sh
+INFISICAL_PROJECT_ID=some-secret-project
+INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=...
+INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=...
+```
+
+Secrets will be expected to reside under `/path/<cluster-name`, use `--name` to select the secret store to use:
+
+```sh
+./scripts/bootstrap.sh $(hostname)-k3d-lab --auto-sync --name my-dev-cluster
+```
+
+### External DNS
+
+External DNS is supported for [Linode DNS Manager](https://techdocs.akamai.com/cloud-computing/docs/dns-manager) for now. Requires a valid LINODE_TOKEN stored in the external secrets store. See [External Secrets](#external-secrets). 
+
+```sh
+./scripts/bootstrap.sh $(hostname)-k3d-lab --auto-sync --name some-cloud-cluster --external-dns
+```
+
 ### Ngrok Ingress Controller
 
 > [!IMPORTANT]
@@ -135,7 +215,7 @@ NGROK_AUTHTOKEN=_your_auth_token_here_
 Then bootstrap with the `--ngrok-enabled` flag:
 
 ```sh
-./scripts/bootstrap.sh $(hostname)-k3d-lab --ngrok-enabled 
+./scripts/bootstrap.sh $(hostname)-k3d-lab --ngrok
 ```
 
 This [sample app](https://ngrok.com/docs/getting-started/kubernetes/ingress#3-deploy-a-sample-service) can be used to validate functionality.
@@ -153,3 +233,5 @@ To periodically clean dangling endpoints (NB: This will delete ALL registered op
 [^1]: Doing so would leak problematic behaviour of a 3rd party operator into our toolchain and create complex, brittle code to maintain. The long-term maintenance drag is ultimately not worth the short term convenience gained.
 
 [^2]: Haven't found a way to label or tag the remote resources in any predictable way yet, so for now make sure to use a dedicated account for dev
+
+[^3]: Howewer, this should in principle also work with other cloud based clusters.

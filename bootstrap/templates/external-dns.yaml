@@ -1,0 +1,33 @@
+{{- if .Values.externalDNS.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+spec:
+  project: bootstrap
+  sources:
+    - repoURL: https://kubernetes-sigs.github.io/external-dns/
+      chart: external-dns
+      targetRevision: 1.20.0
+      helm:
+        releaseName: external-dns
+        valueFiles:
+          - $values/helm/external-dns.yaml
+    - repoURL: '{{ .Values.source.repoURL }}'
+      targetRevision: '{{ .Values.source.targetRevision }}'
+      path: manifests/external-dns
+    - repoURL: '{{ .Values.source.repoURL }}'
+      targetRevision: '{{ .Values.source.targetRevision }}'
+      ref: values
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: external-dns
+  syncPolicy:
+    {{- if .Values.autosync.enabled }}
+    automated:
+      prune: true
+    {{- end }}
+    syncOptions:
+      - CreateNamespace=true
+{{- end }}

@@ -1,0 +1,10 @@
+cluster:
+  name: default
+image:
+  repository: hashicorp/http-echo
+  tag: '1.0'
+  pullPolicy: IfNotPresent
+replicaCount: 1
+ingress:
+  enabled: false
+  host: echo.lke-demo.example.com

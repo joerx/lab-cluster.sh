@@ -5,6 +5,11 @@
 
 set -e -o pipefail
 
+# Confuguration precedence:
+# 1. Default values in this script
+# 2. Values from .env file in the same directory as this script (it exists)
+# 3. Flags explicitly passed to this script
+
 MY_KUBECTX=""
 MY_KUBECONFIG=""
 NAME=""
@@ -14,6 +19,10 @@ REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
 TARGET_REVISION=main
 NGROK_ENABLED=false
 AUTO_SYNC=false
+EXTERNAL_DNS_ENABLED=false
+INFISICAL_PROJECT="example-project"
+DOMAIN=""
+
 
 log() {
   >&2 echo "$@"
@@ -23,8 +32,14 @@ usage() {
   log "Usage: $0 NAME [--kubecfg <path>] [--context <ctx>] [--ssh-key <path>] [--repo-url <url>] [--version <rev>]"
 }
 
-# Parse arguments
+# Load .env file if exists
+if [[ -f "$PWD/.env" ]]; then
+  # shellcheck disable=SC1091
+  log "Loading environment variables from $PWD/.env"
+  source "$PWD/.env"
+fi
 
+# Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --kubecfg)
@@ -47,9 +62,21 @@ while [[ $# -gt 0 ]]; do
       TARGET_REVISION="$2"
       shift 2
       ;;
-    --ngrok-enabled)
+    --ngrok)
       NGROK_ENABLED="true"
       shift
+      ;;
+    --domain)
+      DOMAIN="$2"
+      shift 2
+      ;;
+    --external-dns)
+      EXTERNAL_DNS_ENABLED="true"
+      shift
+      ;;
+    --infisical-project)
+      INFISICAL_PROJECT="$2"
+      shift 2
       ;;
     --auto-sync)
       AUTO_SYNC="true"
@@ -74,8 +101,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 NAME=${NAME:-"k3s-lab-$(hostname)"}
+DOMAIN=${DOMAIN:-"$NAME.local"}
 
-log "Bootstrapping cluster '$NAME"
+log "Bootstrapping cluster '$NAME'"
+log "- Repo URL: $REPO_URL"
+log "- Target revision: $TARGET_REVISION"
+log "- Domain: $DOMAIN"
+log "- Infisical project: $INFISICAL_PROJECT"
+
 
 if [[ -f $PWD/.env ]]; then
   # shellcheck disable=SC1091
@@ -174,6 +207,7 @@ spec:
   - 'https://charts.jetstack.io'
   - 'https://ngrok.github.io/ngrok-operator'
   - 'https://charts.external-secrets.io'
+  - 'https://kubernetes-sigs.github.io/external-dns/'
   destinations:
   - namespace: '*'
     server: '*'
@@ -199,13 +233,18 @@ spec:
       valuesObject:
         cluster:
           name: '$NAME'
+          domain: '$DOMAIN'
         ngrok:
           enabled: $NGROK_ENABLED
+        externalDNS:
+          enabled: $EXTERNAL_DNS_ENABLED
         source:
           repoUrl: '$REPO_URL'
           targetRevision: '$TARGET_REVISION'
         autosync:
           enabled: $AUTO_SYNC
+        infisical:
+          project: '$INFISICAL_PROJECT'
   destination:
     namespace: default
     server: 'https://kubernetes.default.svc'

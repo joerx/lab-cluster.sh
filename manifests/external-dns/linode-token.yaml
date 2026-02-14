@@ -1,0 +1,14 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: linode-token
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: cluster-secrets
+  target:
+    name: linode-token
+  data:
+    - secretKey: LINODE_TOKEN
+      remoteRef:
+        key: LINODE_TOKEN
