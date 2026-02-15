@@ -118,7 +118,6 @@ log "- Domain: $DOMAIN"
 log "- Infisical project: $INFISICAL_PROJECT"
 log "- Infisical path: $INFISICAL_PATH"
 
-exit
 
 if [[ -f $PWD/.env ]]; then
   # shellcheck disable=SC1091
@@ -157,13 +156,9 @@ if kubectl get namespace $ARGO_NAMESPACE >/dev/null 2>&1; then
   log "ArgoCD is already installed in namespace '$ARGO_NAMESPACE'. Skipping installation."
 else
   log "Installing ArgoCD in namespace '$ARGO_NAMESPACE'..."
-  # kubectl create namespace $ARGO_NAMESPACE
-  # kubectl apply -n $ARGO_NAMESPACE -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --server-side --force-conflicts
   helm install argo-cd argo-cd \
     --repo https://argoproj.github.io/argo-helm \
-    --version 9.4.2 \
-    --server-side \
-    --force-conflicts \
+    --version $ARGO_CHART_VERSION \
     --namespace $ARGO_NAMESPACE \
     --create-namespace
 fi
