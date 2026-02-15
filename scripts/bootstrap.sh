@@ -5,25 +5,29 @@
 
 set -e -o pipefail
 
-# Confuguration precedence:
+# Configuration precedence:
 # 1. Default values in this script
-# 2. Values from .env file in the same directory as this script (it exists)
+# 2. Values from $PWD/.env file if it exists
 # 3. Flags explicitly passed to this script
-
 MY_KUBECTX=""
 MY_KUBECONFIG=""
 NAME=""
-NAMESPACE="argocd"
 KEY_FILE="$HOME/.ssh/id_ed25519"
-REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
 TARGET_REVISION=main
 NGROK_ENABLED=false
 AUTO_SYNC=false
 EXTERNAL_DNS_ENABLED=false
 INFISICAL_PROJECT="example-project"
+INFISICAL_PATH="/shared/argocd/bootstrap"
 DOMAIN=""
 
+# Constants, cannot be set via flags or environment variables
+REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
+ARGO_NAMESPACE="argocd"
+ARGO_CHART_VERSION="9.4.2"
 
+
+# Helper functions
 log() {
   >&2 echo "$@"
 }
@@ -78,6 +82,10 @@ while [[ $# -gt 0 ]]; do
       INFISICAL_PROJECT="$2"
       shift 2
       ;;
+    --infisical-path)
+      INFISICAL_PATH="$2"
+      shift 2
+      ;;
     --auto-sync)
       AUTO_SYNC="true"
       shift
@@ -108,6 +116,7 @@ log "- Repo URL: $REPO_URL"
 log "- Target revision: $TARGET_REVISION"
 log "- Domain: $DOMAIN"
 log "- Infisical project: $INFISICAL_PROJECT"
+log "- Infisical path: $INFISICAL_PATH"
 
 
 if [[ -f $PWD/.env ]]; then
@@ -143,18 +152,22 @@ else
 fi
 
 # Check if ArgoCD is already installed, skip installation if it is
-if kubectl get namespace $NAMESPACE >/dev/null 2>&1; then
-  log "ArgoCD is already installed in namespace '$NAMESPACE'. Skipping installation."
+if kubectl get namespace $ARGO_NAMESPACE >/dev/null 2>&1; then
+  log "ArgoCD is already installed in namespace '$ARGO_NAMESPACE'. Skipping installation."
 else
-  log "Installing ArgoCD in namespace '$NAMESPACE'..."
-  kubectl create namespace $NAMESPACE
-  kubectl apply -n $NAMESPACE -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --server-side --force-conflicts
+  log "Installing ArgoCD in namespace '$ARGO_NAMESPACE'..."
+  helm install argo-cd argo-cd \
+    --repo https://argoproj.github.io/argo-helm \
+    --version $ARGO_CHART_VERSION \
+    --namespace $ARGO_NAMESPACE \
+    --create-namespace
 fi
 
 # Wait until we have at least one pod running
 # Might be better to wait for the argocd-server pod specifically, but this is simpler
 log "Waiting for ArgoCD server to be ready..."
-kubectl -n $NAMESPACE wait deploy argocd-server --for jsonpath='{.status.availableReplicas}=1' --timeout=120s
+# kubectl -n $ARGO_NAMESPACE wait deploy argocd-server --for jsonpath='{.status.availableReplicas}=1' --timeout=120s
+kubectl -n $ARGO_NAMESPACE wait deploy argo-cd-argocd-server --for jsonpath='{.status.availableReplicas}=1' --timeout=120s
 
 # Create a secret for the GitHub repo credentials - we need to do this before we sync,
 # so we can't use External Secrets for this one
@@ -245,6 +258,7 @@ spec:
           enabled: $AUTO_SYNC
         infisical:
           project: '$INFISICAL_PROJECT'
+          path: '$INFISICAL_PATH'
   destination:
     namespace: default
     server: 'https://kubernetes.default.svc'
@@ -256,18 +270,18 @@ EOF
 # Print summary and help message
 log
 log "-------------------------------------------------------------------------"
-log "ArgoCD application 'cluster-bootstrap' created in namespace '$NAMESPACE'."
+log "ArgoCD application 'cluster-bootstrap' created in namespace '$ARGO_NAMESPACE'."
 log "You can get the status of the deployed applications with:"
 log 
-log "% kubectl -n $NAMESPACE get applications"
+log "% kubectl -n $ARGO_NAMESPACE get applications"
 log
 log "To get the ArgoCD admin password:"
 log
-log "% kubectl -n $NAMESPACE get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo"
+log "% kubectl -n $ARGO_NAMESPACE get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo"
 log
 log "To access the ArgoCD UI, run:"
 log
-log "% kubectl -n $NAMESPACE port-forward services/argocd-server 8444:https"
+log "% kubectl -n $ARGO_NAMESPACE port-forward services/argocd-server 8444:https"
 log
 log "Then open your browser at https://localhost:8444 and log in with username" 
 log "'admin' and the password above."
