@@ -4,3 +4,4 @@ infisical:
   endpoint: https://eu.infisical.com
   environment: dev
   project: example-project
+  path: /
