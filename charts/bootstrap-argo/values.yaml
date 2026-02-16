@@ -1,0 +1,23 @@
+cluster:
+  name: my-cluster
+  domain: my-cluster.local
+externalDNS:
+  enabled: false
+source:
+  repoURL: my-deployment-repo
+  targetRevision: main
+  secretName: lab-cluster-repo
+  username: git
+  password: s3cr3t
+autosync:
+  enabled: false
+infisical:
+  project: my-project
+  path: clusters/my-cluster
+sourceRepos:
+  - 'https://kubernetes.github.io/ingress-nginx'
+  - 'https://grafana.github.io/helm-charts'
+  - 'https://charts.jetstack.io'
+  - 'https://ngrok.github.io/ngrok-operator'
+  - 'https://charts.external-secrets.io'
+  - 'https://kubernetes-sigs.github.io/external-dns/'

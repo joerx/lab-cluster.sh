@@ -1,0 +1,5 @@
+secret:
+  name: universal-auth-credentials
+universalAuth:
+  clientId: some1d
+  clientSecret: s3cr3t

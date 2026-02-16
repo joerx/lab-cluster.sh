@@ -22,10 +22,10 @@ INFISICAL_PATH="/shared/argocd/bootstrap"
 DOMAIN=""
 
 # Constants, cannot be set via flags or environment variables
-REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
+REPO_URL=https://github.com/joerx/lab-cluster.sh.git
 ARGO_NAMESPACE="argocd"
 ARGO_CHART_VERSION="9.4.2"
-
+EXTERNAL_SECRETS_NAMESPACE="external-secrets"
 
 # Helper functions
 log() {
@@ -119,12 +119,6 @@ log "- Infisical project: $INFISICAL_PROJECT"
 log "- Infisical path: $INFISICAL_PATH"
 
 
-if [[ -f $PWD/.env ]]; then
-  # shellcheck disable=SC1091
-  log "Loading environment variables from $PWD/.env"
-  . "$PWD/.env"
-fi
-
 # Validate input parameters
 if [[ ! -f "$KEY_FILE" ]]; then
   log "SSH private key not found at $KEY_FILE. Please generate an SSH key pair to use with GitHub."
@@ -164,108 +158,35 @@ else
 fi
 
 # Wait until we have at least one pod running
-# Might be better to wait for the argocd-server pod specifically, but this is simpler
 log "Waiting for ArgoCD server to be ready..."
-# kubectl -n $ARGO_NAMESPACE wait deploy argocd-server --for jsonpath='{.status.availableReplicas}=1' --timeout=120s
 kubectl -n $ARGO_NAMESPACE wait deploy argo-cd-argocd-server --for jsonpath='{.status.availableReplicas}=1' --timeout=120s
 
-# Create a secret for the GitHub repo credentials - we need to do this before we sync,
-# so we can't use External Secrets for this one
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: lab-cluster-repo
-  namespace: argocd
-  labels:
-    argocd.argoproj.io/secret-type: repository
-stringData:
-  type: git
-  url: '$REPO_URL'
-  sshPrivateKey: |
-$(cat $KEY_FILE | sed 's/^/    /')
-EOF
-
-cat <<EOF | kubectl apply -f -
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: external-secrets
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: universal-auth-credentials
-  namespace: external-secrets
-stringData:
-  clientId: ${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}
-  clientSecret: ${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}
-EOF
-
-# Create a project for the bootstrap application
+# Install the Application for ArgoCD to sync the bootstrap stack
+# Creates a project for the bootstrap application
 # It has privileged access, so it only allows access to the bootstrap repo
 # We need to add any 3rd party repos used during the bootstrap process here as well
-cat <<EOF | kubectl apply -f -
-apiVersion: argoproj.io/v1alpha1
-kind: AppProject
-metadata:
-  name: bootstrap
-  namespace: argocd
-spec:
-  sourceRepos:
-  - '$REPO_URL'
-  - 'https://kubernetes.github.io/ingress-nginx'
-  - 'https://grafana.github.io/helm-charts'
-  - 'https://charts.jetstack.io'
-  - 'https://ngrok.github.io/ngrok-operator'
-  - 'https://charts.external-secrets.io'
-  - 'https://kubernetes-sigs.github.io/external-dns/'
-  destinations:
-  - namespace: '*'
-    server: '*'
-  clusterResourceWhitelist:
-  - group: '*'
-    kind: '*'
-EOF
+helm upgrade --install bootstrap-argo ./charts/bootstrap-argo \
+  --namespace $ARGO_NAMESPACE \
+  --set "cluster.name=$NAME" \
+  --set "cluster.domain=$DOMAIN" \
+  --set "externalDNS.enabled=$EXTERNAL_DNS_ENABLED" \
+  --set "source.repoURL=$REPO_URL" \
+  --set "source.targetRevision=$TARGET_REVISION" \
+  --set "source.username=joerx" \
+  --set "source.password=$GITHUB_TOKEN" \
+  --set "autosync.enabled=$AUTO_SYNC" \
+  --set "infisical.project=$INFISICAL_PROJECT" \
+  --set "infisical.path=$INFISICAL_PATH"
 
-# Create an ArgoCD application for the lab cluster
-cat <<EOF | kubectl apply -f -
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: cluster-bootstrap
-  namespace: argocd
-spec:
-  project: bootstrap
-  source:
-    path: bootstrap
-    repoURL: '$REPO_URL'
-    targetRevision: '$TARGET_REVISION'
-    helm:
-      valuesObject:
-        cluster:
-          name: '$NAME'
-          domain: '$DOMAIN'
-        ngrok:
-          enabled: $NGROK_ENABLED
-        externalDNS:
-          enabled: $EXTERNAL_DNS_ENABLED
-        source:
-          repoUrl: '$REPO_URL'
-          targetRevision: '$TARGET_REVISION'
-        autosync:
-          enabled: $AUTO_SYNC
-        infisical:
-          project: '$INFISICAL_PROJECT'
-          path: '$INFISICAL_PATH'
-  destination:
-    namespace: default
-    server: 'https://kubernetes.default.svc'
-  syncPolicy:
-    automated:
-      prune: true
-EOF
+# This only installs the secret with the initial credentials, everything after that
+# is managed by ArgoCD which has already been bootstrapped at this point. Argo will 
+# deploy the external-secrets chart and SecretsStores that will consume the secrets
+# provided here.
+helm upgrade --install bootstrap-secrets ./charts/bootstrap-secrets \
+  --namespace $EXTERNAL_SECRETS_NAMESPACE \
+  --set "universalAuth.clientId=$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID" \
+  --set "universalAuth.clientSecret=$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET"
+
 
 # Print summary and help message
 log

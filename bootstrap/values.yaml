@@ -14,3 +14,7 @@ ngrok:
 
 externalDNS:
   enabled: false
+
+infisical:
+  project: test
+  path: test
