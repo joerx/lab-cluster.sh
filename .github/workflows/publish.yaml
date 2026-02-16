@@ -1,43 +1,28 @@
-name: publish
+name: Release Charts
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      # - main
+      - tf-based-bootstrap
 
 jobs:
-  terraform_test:
-    name: Publish Module
-    runs-on: ubuntu-latest
+  release:
     permissions:
       contents: write
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-      - name: Get release url
-        id: get_release_url
-        run: |
-          set -e
-          UPLOAD_URL=$(curl -fs -L \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} | jq -r '.upload_url' | sed -e 's/{?name,label}//')
-          echo "UPLOAD_URL=${UPLOAD_URL}" >> $GITHUB_ENV
-      - name: Upload module
-        run: |
-          set -e
-          CHART_VERSION=${{ github.ref_name }}
-          make package VERSION=$CHART_VERSION
-          
-          curl \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H "Content-Type: application/gzip" \
-            --data-binary @out/bootstrap-argo-${CHART_VERSION}.tgz \
-            $UPLOAD_URL?name=bootstrap-argo-${CHART_VERSION}.tgz
+        with:
+          fetch-depth: 0
 
-          curl \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H "Content-Type: application/gzip" \
-            --data-binary @out/bootstrap-secrets-${CHART_VERSION}.tgz \
-            $UPLOAD_URL?name=bootstrap-secrets-${CHART_VERSION}.tgz
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
