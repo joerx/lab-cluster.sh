@@ -1,0 +1,25 @@
+apiVersion: v1
+entries:
+  bootstrap-argo:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2026-02-16T16:03:55.922455369Z"
+    description: Templates for ArgoCD application to bootstrap the cluster
+    digest: d31ff13cdd9dbcd0b4db71ab0c200069114ff6107e98521baa5a0131b2b04243
+    name: bootstrap-argo
+    type: application
+    urls:
+    - https://github.com/joerx/lab-cluster.sh/releases/download/bootstrap-argo-0.1.0-rc/bootstrap-argo-0.1.0-rc.tgz
+    version: 0.1.0-rc
+  bootstrap-secrets:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2026-02-16T16:03:56.092468094Z"
+    description: Templates for secret stores used in the cluster
+    digest: 98b7f08633f0b99c27f476b1153dcd7470c8c381533f27f16a6769a825eb8609
+    name: bootstrap-secrets
+    type: application
+    urls:
+    - https://github.com/joerx/lab-cluster.sh/releases/download/bootstrap-secrets-0.1.0-rc/bootstrap-secrets-0.1.0-rc.tgz
+    version: 0.1.0-rc
+generated: "2026-02-16T16:03:56.092475007Z"
