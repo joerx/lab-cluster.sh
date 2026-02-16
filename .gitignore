@@ -5,3 +5,5 @@ vms/*
 !vms/.gitkeep
 
 .env
+
+out/
