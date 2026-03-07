@@ -184,6 +184,7 @@ helm upgrade --install bootstrap-argo ./charts/bootstrap-argo \
 # provided here.
 helm upgrade --install bootstrap-secrets ./charts/bootstrap-secrets \
   --namespace $EXTERNAL_SECRETS_NAMESPACE \
+  --create-namespace \
   --set "universalAuth.clientId=$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID" \
   --set "universalAuth.clientSecret=$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET"
 
@@ -202,7 +203,7 @@ log "% kubectl -n $ARGO_NAMESPACE get secret argocd-initial-admin-secret -o json
 log
 log "To access the ArgoCD UI, run:"
 log
-log "% kubectl -n $ARGO_NAMESPACE port-forward services/argocd-server 8444:https"
+log "% kubectl -n $ARGO_NAMESPACE port-forward services/argo-cd-argocd-server 8444:https"
 log
 log "Then open your browser at https://localhost:8444 and log in with username" 
 log "'admin' and the password above."
