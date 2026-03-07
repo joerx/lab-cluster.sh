@@ -1,0 +1,54 @@
+name: Build and publish artifacts
+
+on:
+  push:
+    branches:
+      # - main
+      - tf-based-bootstrap
+    tags:
+      - "v*"
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publish-chart:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chart: [bootstrap-argo, bootstrap-secrets]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: |
+          helm registry login ${{ env.REGISTRY }} \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive chart version
+        id: chart_version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            BASE=$(grep '^version:' charts/${{ matrix.chart }}/Chart.yaml | awk '{print $2}')
+            SHA=$(echo "$GITHUB_SHA" | cut -c1-8)
+            echo "version=${BASE}-${SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package chart
+        run: |
+          helm package charts/${{ matrix.chart }} \
+            --version ${{ steps.chart_version.outputs.version }}
+
+      - name: Push chart
+        run: |
+          helm push cluster-${{ matrix.chart }}-${{ steps.chart_version.outputs.version }}.tgz \
+            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/helm

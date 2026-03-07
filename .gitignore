@@ -6,4 +6,4 @@ vms/*
 
 .env
 
-out/*
+out/
