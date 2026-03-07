@@ -3,8 +3,7 @@ name: Build and publish artifacts
 on:
   push:
     branches:
-      # - main
-      - tf-based-bootstrap
+      - main
     tags:
       - "v*"
 
