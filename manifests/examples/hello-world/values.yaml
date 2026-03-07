@@ -7,4 +7,4 @@ image:
 replicaCount: 1
 ingress:
   enabled: false
-  host: echo.lke-demo.example.com
+  host: hello.example.com

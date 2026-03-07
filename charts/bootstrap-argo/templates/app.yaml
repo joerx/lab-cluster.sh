@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-bootstrap
+  namespace: argocd
+spec:
+  project: bootstrap
+  source:
+    path: bootstrap
+    repoURL: '{{ .Values.source.repoURL }}'
+    targetRevision: '{{ .Values.source.targetRevision }}'
+    helm:
+      valuesObject:
+        cluster:
+          name: '{{ .Values.cluster.name }}'
+          domain: '{{ .Values.cluster.domain }}'
+        externalDNS:
+          enabled: {{ .Values.externalDNS.enabled }}
+        source:
+          repoURL: '{{ .Values.source.repoURL }}'
+          targetRevision: '{{ .Values.source.targetRevision }}'
+        autosync:
+          enabled: {{ .Values.autosync.enabled }}
+        infisical:
+          project: '{{ .Values.infisical.project }}'
+          path: '{{ .Values.infisical.path }}'
+  destination:
+    namespace: default
+    server: 'https://kubernetes.default.svc'
+  syncPolicy:
+    automated:
+      prune: true
