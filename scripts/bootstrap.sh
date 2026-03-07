@@ -24,8 +24,7 @@ DOMAIN=""
 # Constants, cannot be set via flags or environment variables
 REPO_URL="git@github.com:joerx/lab-cluster.sh.git"
 ARGO_NAMESPACE="argocd"
-ARGO_CHART_VERSION="9.4.2"
-
+ARGO_CHART_VERSION="9.4.7"
 
 # Helper functions
 log() {
