@@ -200,10 +200,10 @@ helm upgrade --install bootstrap-secrets ./charts/bootstrap-secrets \
   --set "backend=$SECRET_STORE_BACKEND" \
   --set "universalAuth.clientId=${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-}" \
   --set "universalAuth.clientSecret=${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET:-}" \
-  --set "localSecrets.infraSecrets.GCLOUD_K8S_RW_TOKEN=${GCLOUD_K8S_RW_TOKEN:-}" \
-  --set "localSecrets.infraSecrets.GCLOUD_HOSTED_LOGS_ID=${GCLOUD_HOSTED_LOGS_ID:-}" \
-  --set "localSecrets.infraSecrets.GCLOUD_HOSTED_METRICS_ID=${GCLOUD_HOSTED_METRICS_ID:-}"
-
+  --set "localSecrets.grafana.GCLOUD_K8S_RW_TOKEN=${GCLOUD_K8S_RW_TOKEN:-}" \
+  --set "localSecrets.grafana.GCLOUD_HOSTED_LOGS_ID=${GCLOUD_HOSTED_LOGS_ID:-}" \
+  --set "localSecrets.grafana.GCLOUD_HOSTED_METRICS_ID=${GCLOUD_HOSTED_METRICS_ID:-}" \
+  --set "localSecrets.externalDns.LINODE_TOKEN=${LINODE_TOKEN:-}"
 
 # Print summary and help message
 log
