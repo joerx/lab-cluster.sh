@@ -7,8 +7,7 @@ source:
   repoURL: my-deployment-repo
   targetRevision: main
   secretName: lab-cluster-repo
-  username: git
-  password: s3cr3t
+  sshPrivateKey: ""
 autosync:
   enabled: false
 secretStore:

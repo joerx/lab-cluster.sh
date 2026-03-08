@@ -23,7 +23,7 @@ DOMAIN=""
 SECRET_STORE_BACKEND="kubernetes"
 
 # Constants, cannot be set via flags or environment variables
-REPO_URL=https://github.com/joerx/lab-cluster.sh.git
+REPO_URL=git@github.com:joerx/lab-cluster.sh.git
 ARGO_NAMESPACE="argocd"
 ARGO_CHART_VERSION="9.4.7"
 EXTERNAL_SECRETS_NAMESPACE="external-secrets"
@@ -185,8 +185,7 @@ helm upgrade --install bootstrap-argo ./charts/bootstrap-argo \
   --set "externalDNS.enabled=$EXTERNAL_DNS_ENABLED" \
   --set "source.repoURL=$REPO_URL" \
   --set "source.targetRevision=$TARGET_REVISION" \
-  --set "source.username=joerx" \
-  --set "source.password=$GITHUB_TOKEN" \
+  --set-file "source.sshPrivateKey=$KEY_FILE" \
   --set "autosync.enabled=$AUTO_SYNC" \
   --set "secretStore.backend=$SECRET_STORE_BACKEND" \
   --set "infisical.project=$INFISICAL_PROJECT" \
