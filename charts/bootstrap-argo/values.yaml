@@ -11,6 +11,9 @@ source:
   password: s3cr3t
 autosync:
   enabled: false
+secretStore:
+  backend: infisical
+
 infisical:
   project: my-project
   path: clusters/my-cluster

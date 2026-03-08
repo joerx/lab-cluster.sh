@@ -1,5 +1,11 @@
 cluster:
   name: default
+
+# backend controls which ESO provider is used for the ClusterSecretStores.
+# - infisical: production default, requires universal-auth-credentials secret in external-secrets namespace
+# - kubernetes: local clusters, reads from Secrets in the local-secrets namespace
+backend: infisical
+
 infisical:
   endpoint: https://eu.infisical.com
   environment: dev

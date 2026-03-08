@@ -1,5 +1,17 @@
+backend: infisical
+
 secret:
   name: universal-auth-credentials
 universalAuth:
   clientId: some1d
   clientSecret: s3cr3t
+
+# localSecrets is only used when backend=kubernetes.
+# Values are seeded into the local-secrets namespace for the kubernetes ESO provider.
+# Read from environment variables / .env file and passed in via --set at bootstrap time.
+localSecrets:
+  infraSecrets:
+    GCLOUD_K8S_RW_TOKEN: ""
+    GCLOUD_HOSTED_LOGS_ID: ""
+    GCLOUD_HOSTED_METRICS_ID: ""
+  clusterSecrets: {}

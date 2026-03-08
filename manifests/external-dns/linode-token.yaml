@@ -11,4 +11,5 @@ spec:
   data:
     - secretKey: LINODE_TOKEN
       remoteRef:
-        key: LINODE_TOKEN
+        key: cluster-secrets
+        property: LINODE_TOKEN

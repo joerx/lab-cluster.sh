@@ -1,0 +1,33 @@
+{{- if eq .Values.backend "kubernetes" }}
+# ServiceAccount used by ESO to authenticate against the local-secrets namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eso-local-reader
+  namespace: external-secrets
+---
+# Grants the ServiceAccount read access to Secrets in local-secrets.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: eso-local-reader
+  namespace: local-secrets
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: eso-local-reader
+  namespace: local-secrets
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: eso-local-reader
+subjects:
+  - kind: ServiceAccount
+    name: eso-local-reader
+    namespace: external-secrets
+{{- end }}

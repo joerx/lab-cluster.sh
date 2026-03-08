@@ -15,6 +15,12 @@ ngrok:
 externalDNS:
   enabled: false
 
+secretStore:
+  # backend controls the ESO ClusterSecretStore provider.
+  # Use "infisical" for production clusters (requires Infisical credentials).
+  # Use "kubernetes" for local clusters - secrets stored in the local-secrets namespace.
+  backend: infisical
+
 infisical:
   project: test
   path: test

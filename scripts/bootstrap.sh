@@ -20,6 +20,7 @@ EXTERNAL_DNS_ENABLED=false
 INFISICAL_PROJECT="example-project"
 INFISICAL_PATH="/shared/argocd/bootstrap"
 DOMAIN=""
+SECRET_STORE_BACKEND="kubernetes"
 
 # Constants, cannot be set via flags or environment variables
 REPO_URL=https://github.com/joerx/lab-cluster.sh.git
@@ -86,6 +87,10 @@ while [[ $# -gt 0 ]]; do
       INFISICAL_PATH="$2"
       shift 2
       ;;
+    --local)
+      SECRET_STORE_BACKEND="kubernetes"
+      shift
+      ;;
     --auto-sync)
       AUTO_SYNC="true"
       shift
@@ -115,8 +120,11 @@ log "Bootstrapping cluster '$NAME'"
 log "- Repo URL: $REPO_URL"
 log "- Target revision: $TARGET_REVISION"
 log "- Domain: $DOMAIN"
-log "- Infisical project: $INFISICAL_PROJECT"
-log "- Infisical path: $INFISICAL_PATH"
+log "- Secret store backend: $SECRET_STORE_BACKEND"
+if [[ "$SECRET_STORE_BACKEND" == "infisical" ]]; then
+  log "- Infisical project: $INFISICAL_PROJECT"
+  log "- Infisical path: $INFISICAL_PATH"
+fi
 
 
 # Validate input parameters
@@ -126,11 +134,15 @@ if [[ ! -f "$KEY_FILE" ]]; then
   exit 1
 fi
 
-# Secret Zero: All other secrets are stored in Infisical and will be retrieved using ESO
-if [[ -z "$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID" || -z "$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" ]]; then
-  log "Infisical Universal Auth credentials not fully set in environment variables."
-  log "Please set INFISICAL_UNIVERSAL_AUTH_CLIENT_ID and INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET."
-  exit 1
+# Secret Zero: All other secrets are stored in Infisical and will be retrieved using ESO.
+# Not required when using the fake backend for local clusters.
+if [[ "$SECRET_STORE_BACKEND" == "infisical" ]]; then
+  if [[ -z "$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID" || -z "$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" ]]; then
+    log "Infisical Universal Auth credentials not fully set in environment variables."
+    log "Please set INFISICAL_UNIVERSAL_AUTH_CLIENT_ID and INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET."
+    log "For local clusters without Infisical, use the --local flag."
+    exit 1
+  fi
 fi
 
 # Set kubernetes config and context if provided
@@ -175,18 +187,22 @@ helm upgrade --install bootstrap-argo ./charts/bootstrap-argo \
   --set "source.username=joerx" \
   --set "source.password=$GITHUB_TOKEN" \
   --set "autosync.enabled=$AUTO_SYNC" \
+  --set "secretStore.backend=$SECRET_STORE_BACKEND" \
   --set "infisical.project=$INFISICAL_PROJECT" \
   --set "infisical.path=$INFISICAL_PATH"
 
-# This only installs the secret with the initial credentials, everything after that
-# is managed by ArgoCD which has already been bootstrapped at this point. Argo will 
-# deploy the external-secrets chart and SecretsStores that will consume the secrets
-# provided here.
+# Installs the secret with the initial credentials (infisical backend) or seeds the
+# local-secrets namespace (kubernetes backend). Everything after that is managed by
+# ArgoCD, which deploys the external-secrets chart and ClusterSecretStores.
 helm upgrade --install bootstrap-secrets ./charts/bootstrap-secrets \
   --namespace $EXTERNAL_SECRETS_NAMESPACE \
   --create-namespace \
-  --set "universalAuth.clientId=$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID" \
-  --set "universalAuth.clientSecret=$INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET"
+  --set "backend=$SECRET_STORE_BACKEND" \
+  --set "universalAuth.clientId=${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-}" \
+  --set "universalAuth.clientSecret=${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET:-}" \
+  --set "localSecrets.infraSecrets.GCLOUD_K8S_RW_TOKEN=${GCLOUD_K8S_RW_TOKEN:-}" \
+  --set "localSecrets.infraSecrets.GCLOUD_HOSTED_LOGS_ID=${GCLOUD_HOSTED_LOGS_ID:-}" \
+  --set "localSecrets.infraSecrets.GCLOUD_HOSTED_METRICS_ID=${GCLOUD_HOSTED_METRICS_ID:-}"
 
 
 # Print summary and help message
