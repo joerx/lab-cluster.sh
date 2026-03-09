@@ -11,4 +11,5 @@ spec:
   data:
     - secretKey: LINODE_TOKEN
       remoteRef:
-        key: LINODE_TOKEN
+        key: external-dns
+        property: LINODE_TOKEN

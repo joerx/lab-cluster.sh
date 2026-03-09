@@ -21,6 +21,8 @@ spec:
           targetRevision: '{{ .Values.source.targetRevision }}'
         autosync:
           enabled: {{ .Values.autosync.enabled }}
+        secretStore:
+          backend: '{{ .Values.secretStore.backend }}'
         infisical:
           project: '{{ .Values.infisical.project }}'
           path: '{{ .Values.infisical.path }}'
