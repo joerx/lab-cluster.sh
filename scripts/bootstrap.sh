@@ -80,10 +80,12 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --infisical-project)
+      SECRET_STORE_BACKEND="infisical"
       INFISICAL_PROJECT="$2"
       shift 2
       ;;
     --infisical-path)
+      SECRET_STORE_BACKEND="infisical"
       INFISICAL_PATH="$2"
       shift 2
       ;;
@@ -174,9 +176,8 @@ log "Waiting for ArgoCD server to be ready..."
 kubectl -n $ARGO_NAMESPACE wait deploy argo-cd-argocd-server --for jsonpath='{.status.availableReplicas}=1' --timeout=120s
 
 # Install the Application for ArgoCD to sync the bootstrap stack
-# Creates a project for the bootstrap application
-# It has privileged access, so it only allows access to the bootstrap repo
-# We need to add any 3rd party repos used during the bootstrap process here as well
+# Creates a project for the bootstrap application. Helm values passed here 
+# are used to toggle and configure the clusters core features
 helm upgrade --install bootstrap-argo ./charts/bootstrap-argo \
   --namespace $ARGO_NAMESPACE \
   --set "cluster.name=$NAME" \
