@@ -1,0 +1,2 @@
+cluster:
+  domain: k3s-lab.local

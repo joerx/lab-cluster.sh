@@ -6,11 +6,11 @@ metadata:
   namespace: cert-manager
 spec:
   isCA: true
-  commonName: root.k3s-lab.local
+  commonName: root.{{ .Values.cluster.domain }}
   secretName: root-ca
   subject:
     organizations:
-      - k3s-lab.local
+      - {{ .Values.cluster.domain }}
   privateKey:
     algorithm: ECDSA
     size: 256
