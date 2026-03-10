@@ -9,6 +9,10 @@ spec:
     repoURL: '{{ .Values.source.repoURL }}'
     targetRevision: '{{ .Values.source.targetRevision }}'
     path: manifests/cluster-ca
+    helm:
+      valuesObject:
+        cluster:
+          domain: '{{ .Values.cluster.domain }}'
   destination:
     server: "https://kubernetes.default.svc"
     namespace: cert-manager

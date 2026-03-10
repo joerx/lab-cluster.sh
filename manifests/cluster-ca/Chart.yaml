@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cluster-ca
+description: Cluster root CA and issuer resources for cert-manager.
+type: application
+version: 0.1.0
