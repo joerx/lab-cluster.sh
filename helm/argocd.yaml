@@ -1,0 +1,19 @@
+configs:
+  params:
+    server.insecure: "true"
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    tls: true
+    annotations:
+      cert-manager.io/cluster-issuer: cluster-issuer
+
+repoServer:
+  livenessProbe:
+    timeoutSeconds: 30
+    failureThreshold: 10
+  readinessProbe:
+    timeoutSeconds: 30
+    failureThreshold: 10

@@ -159,17 +159,14 @@ else
   log "Using default kubectl context"
 fi
 
-# Check if ArgoCD is already installed, skip installation if it is
-if kubectl get namespace $ARGO_NAMESPACE >/dev/null 2>&1; then
-  log "ArgoCD is already installed in namespace '$ARGO_NAMESPACE'. Skipping installation."
-else
-  log "Installing ArgoCD in namespace '$ARGO_NAMESPACE'..."
-  helm install argo-cd argo-cd \
-    --repo https://argoproj.github.io/argo-helm \
-    --version $ARGO_CHART_VERSION \
-    --namespace $ARGO_NAMESPACE \
-    --create-namespace
-fi
+log "Installing/upgrading ArgoCD in namespace '$ARGO_NAMESPACE'..."
+helm upgrade --install argo-cd argo-cd \
+  --repo https://argoproj.github.io/argo-helm \
+  --version $ARGO_CHART_VERSION \
+  --namespace $ARGO_NAMESPACE \
+  --create-namespace \
+  --values ./helm/argocd.yaml \
+  --set "server.ingress.hostname=argocd.$DOMAIN"
 
 # Wait until we have at least one pod running
 log "Waiting for ArgoCD server to be ready..."
@@ -217,11 +214,15 @@ log "To get the ArgoCD admin password:"
 log
 log "% kubectl -n $ARGO_NAMESPACE get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo"
 log
-log "To access the ArgoCD UI, run:"
+log "To access the ArgoCD UI:"
 log
-log "% kubectl -n $ARGO_NAMESPACE port-forward services/argo-cd-argocd-server 8444:https"
+log "  https://argocd.$DOMAIN  (once ingress-nginx and cert-manager have synced)"
 log
-log "Then open your browser at https://localhost:8444 and log in with username" 
+log "Or via port-forward before ingress is ready:"
+log
+log "% kubectl -n $ARGO_NAMESPACE port-forward services/argo-cd-argocd-server 8080:80"
+log
+log "Then open your browser at http://localhost:8080 and log in with username"
 log "'admin' and the password above."
 log "-------------------------------------------------------------------------"
 log
