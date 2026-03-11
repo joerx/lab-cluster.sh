@@ -113,12 +113,12 @@ Without `--auto-sync`, this will only install ArgoCD and sync the initial ArgoCD
 
 ### Cloud Based Deployment
 
-To bootstrap a cluster into the cloud, only LKE is currently supported.[^3] It is up to the user to decide how to obtain a cluster in the first place and usually requires additional infra to be in place. It also requires a [secrets management](#external-secrets) backend.
+To bootstrap a cluster into the cloud, only LKE is currently tested, although this should in principle also work with other managed clusters. It is up to the user to decide how to obtain a cluster in the first place and usually requires additional infrastructure. 
 
-To bootstrap with an existing secrets backend `my-cluster-l4b` and enable external DNS:
+This repo has been tested for [zuse-cc/terraform-linode-lke-cluster](https://github.com/zuse-cc/terraform-linode-lke-cluster/), a matching Terraform version of this bootstrap script can be found [here](https://github.com/zuse-cc/terraform-helm-cluster-bootstrap)
 
 ```sh
-./scripts/bootstrap.sh --auto-sync --name my-cluster-l4b --domain my-cluster-l4b.dev.example.com --external-dns
+./scripts/bootstrap.sh --auto-sync --domain my-cluster-l4b.dev.example.com --external-dns
 ```
 
 ### Validation
@@ -194,10 +194,11 @@ Secrets will be expected to reside under `/path/<cluster-name`, use `--name` to 
 
 ### External DNS
 
-External DNS is supported for [Linode DNS Manager](https://techdocs.akamai.com/cloud-computing/docs/dns-manager) for now. Requires a valid LINODE_TOKEN stored in the external secrets store. See [External Secrets](#external-secrets). 
+External DNS is supported for [Linode DNS Manager](https://techdocs.akamai.com/cloud-computing/docs/dns-manager) for now. Requires an existing Linode domain and a valid `LINODE_TOKEN`. The token can be either in an external secrets store or on the local shell environment. See [External Secrets](#external-secrets) 
 
 ```sh
-./scripts/bootstrap.sh $(hostname)-k3d-lab --auto-sync --name some-cloud-cluster --external-dns
+export LINODE_TOKEN=<your linode token> # Or use .env
+./scripts/bootstrap.sh --auto-sync --external-dns --domain your-domain.example.com
 ```
 
 ### Ngrok Ingress Controller
@@ -233,5 +234,3 @@ To periodically clean dangling endpoints (NB: This will delete ALL registered op
 [^1]: Doing so would leak problematic behaviour of a 3rd party operator into our toolchain and create complex, brittle code to maintain. The long-term maintenance drag is ultimately not worth the short term convenience gained.
 
 [^2]: Haven't found a way to label or tag the remote resources in any predictable way yet, so for now make sure to use a dedicated account for dev
-
-[^3]: Howewer, this should in principle also work with other cloud based clusters.

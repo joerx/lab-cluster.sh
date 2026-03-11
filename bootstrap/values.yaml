@@ -24,3 +24,7 @@ secretStore:
 infisical:
   project: test
   path: test
+
+letsencrypt:
+  enabled: false
+  email: ""

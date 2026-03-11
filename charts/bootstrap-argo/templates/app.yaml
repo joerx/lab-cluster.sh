@@ -26,6 +26,9 @@ spec:
         infisical:
           project: '{{ .Values.infisical.project }}'
           path: '{{ .Values.infisical.path }}'
+        letsencrypt:
+          enabled: {{ .Values.letsencrypt.enabled }}
+          email: '{{ .Values.letsencrypt.email }}'
   destination:
     namespace: default
     server: 'https://kubernetes.default.svc'

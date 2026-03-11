@@ -13,6 +13,9 @@ spec:
       valuesObject:
         cluster:
           domain: '{{ .Values.cluster.domain }}'
+        letsencrypt:
+          enabled: {{ .Values.letsencrypt.enabled }}
+          email: '{{ .Values.letsencrypt.email }}'
   destination:
     server: "https://kubernetes.default.svc"
     namespace: cert-manager
