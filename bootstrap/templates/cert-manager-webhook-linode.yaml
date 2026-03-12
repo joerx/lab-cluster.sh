@@ -1,23 +1,17 @@
+{{- if .Values.letsencrypt.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cluster-ca
+  name: cert-manager-webhook-linode
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: bootstrap
   source:
     repoURL: '{{ .Values.source.repoURL }}'
     targetRevision: '{{ .Values.source.targetRevision }}'
-    path: manifests/cluster-ca
-    helm:
-      valuesObject:
-        cluster:
-          domain: '{{ .Values.cluster.domain }}'
-        letsencrypt:
-          enabled: {{ .Values.letsencrypt.enabled }}
-          email: '{{ .Values.letsencrypt.email }}'
+    path: charts/cert-manager-webhook-linode
   destination:
     server: "https://kubernetes.default.svc"
     namespace: cert-manager
@@ -28,3 +22,4 @@ spec:
     {{- end }}
     syncOptions:
       - CreateNamespace=true
+{{- end }}

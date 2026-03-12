@@ -80,8 +80,8 @@ Destroy VM (Will delete all data):
 ### Cloud Based Clusters
 
 - This tool is not designed to create cloud based clusters since there is too much variety between them
-- The [bootstrapping](#bootstrapping) components however are still designed to work on a managed cluster
-- So far I tested this only for [Linode LKE](https://techdocs.akamai.com/cloud-computing/docs/linode-kubernetes-engine) however
+- The [bootstrapping](#bootstrapping) components however are still intended to work on managed cluster by major providers
+- So far I tested this only for [Linode LKE](https://techdocs.akamai.com/cloud-computing/docs/linode-kubernetes-engine)
 - See [cloud cluster bootstrap](#cloud-based-deployment) for instructions how to bootstrap an LKE cluster
 
 ## Bootstrapping
@@ -113,12 +113,12 @@ Without `--auto-sync`, this will only install ArgoCD and sync the initial ArgoCD
 
 ### Cloud Based Deployment
 
-To bootstrap a cluster into the cloud, only LKE is currently supported.[^3] It is up to the user to decide how to obtain a cluster in the first place and usually requires additional infra to be in place. It also requires a [secrets management](#external-secrets) backend.
+To bootstrap a cluster into the cloud, only LKE is currently tested, although this should in principle also work with other managed clusters. It is up to the user to decide how to obtain a cluster in the first place and usually requires additional infrastructure. 
 
-To bootstrap with an existing secrets backend `my-cluster-l4b` and enable external DNS:
+This repo has been tested for [zuse-cc/terraform-linode-lke-cluster](https://github.com/zuse-cc/terraform-linode-lke-cluster/), a matching Terraform version of this bootstrap script can be found [here](https://github.com/zuse-cc/terraform-helm-cluster-bootstrap)
 
 ```sh
-./scripts/bootstrap.sh --auto-sync --name my-cluster-l4b --domain my-cluster-l4b.dev.example.com --external-dns
+./scripts/bootstrap.sh --auto-sync --domain my-cluster-l4b.dev.example.com --external-dns
 ```
 
 ### Validation
@@ -154,27 +154,26 @@ kubectl -n argocd port-forward services/argocd-server 8444:https
 
 Open browser at [localhost:8444](https://localhost:8444), accept certificate error, log in with username 'admin' & password
 
-## Additional Options
-
-To set `--kubecfg` to the kubernetes config file created as part of cluster creation:
-
-```sh
-./scripts/bootstrap.sh --kubecfg $PWD/vms/k3s-lab/.kubecfg --auto-sync
-```
-
-To use the default `KUBECONFIG` but explicitly select a context:
-
-```sh
-./scripts/bootstrap.sh --context k3d-k3s-default --auto-sync
-```
-
-To deploy a specific branch or tag instead of `main`:
-
-```sh
-./scripts/bootstrap.sh --version my-working-branch
-```
-
 ## Components
+
+### Certificate Manager
+
+The default `cert-manager` configuration uses a local, self signed root CA for all certificate requests in the cluster. LetsEncrypt is supported when [external dns](#external-dns) is enabled too. In that case a `--domain` and `--letsencrypt-email` need to be passed to the bootstrap script and a `LINODE_TOKEN` is required:
+
+```sh
+export LINODE_TOKEN=<your linode token> # Or use .env
+./scripts/bootstrap.sh --auto-sync --external-dns --domain cluster.example.com --letsencrypt-email hostmaster@cluster.example.com
+```
+
+Cert manager will be using the `dns01` challenge so issuance of certificates can take a few minutes. Check the Linode console for the correct TXT records are being set in the clusters DNS zone. In the meantime, the Ingress controllers default dummy certificate will be shown.
+
+To validate a certificate on a local cluster:
+
+```sh
+HOST=$(kubectl get ingress hello-world -n default -o jsonpath='{.spec.rules[*].host}')
+IP=$(kubectl get ingress hello-world -n default -o jsonpath='{.status.loadBalancer.ingress[*].ip}')
+openssl s_client -connect $IP:443 -servername $HOST | openssl x509 -text -noout | grep Issuer
+```
 
 ### External Secrets
 
@@ -194,10 +193,11 @@ Secrets will be expected to reside under `/path/<cluster-name`, use `--name` to 
 
 ### External DNS
 
-External DNS is supported for [Linode DNS Manager](https://techdocs.akamai.com/cloud-computing/docs/dns-manager) for now. Requires a valid LINODE_TOKEN stored in the external secrets store. See [External Secrets](#external-secrets). 
+External DNS is supported for [Linode DNS Manager](https://techdocs.akamai.com/cloud-computing/docs/dns-manager) for now. Requires an existing Linode domain and a valid `LINODE_TOKEN`. The token can be either in an external secrets store or on the local shell environment. See [External Secrets](#external-secrets) 
 
 ```sh
-./scripts/bootstrap.sh $(hostname)-k3d-lab --auto-sync --name some-cloud-cluster --external-dns
+export LINODE_TOKEN=<your linode token> # Or use .env
+./scripts/bootstrap.sh --auto-sync --external-dns --domain your-domain.example.com
 ```
 
 ### Ngrok Ingress Controller
@@ -230,8 +230,27 @@ To periodically clean dangling endpoints (NB: This will delete ALL registered op
 ./scripts/misc/ngrok-cleanup.sh
 ```
 
+## Additional Options
+
+To set `--kubecfg` to the kubernetes config file created as part of cluster creation:
+
+```sh
+./scripts/bootstrap.sh --kubecfg $PWD/vms/k3s-lab/.kubecfg --auto-sync
+```
+
+To use the default `KUBECONFIG` but explicitly select a context:
+
+```sh
+./scripts/bootstrap.sh --context k3d-k3s-default --auto-sync
+```
+
+To deploy a specific branch or tag instead of `main`:
+
+```sh
+./scripts/bootstrap.sh --version my-working-branch
+```
+
 [^1]: Doing so would leak problematic behaviour of a 3rd party operator into our toolchain and create complex, brittle code to maintain. The long-term maintenance drag is ultimately not worth the short term convenience gained.
 
 [^2]: Haven't found a way to label or tag the remote resources in any predictable way yet, so for now make sure to use a dedicated account for dev
 
-[^3]: Howewer, this should in principle also work with other cloud based clusters.

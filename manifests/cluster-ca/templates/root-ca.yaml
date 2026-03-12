@@ -1,3 +1,4 @@
+{{- if not .Values.letsencrypt.enabled }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -18,3 +19,4 @@ spec:
     name: root-issuer
     kind: Issuer
     group: cert-manager.io
+{{- end }}

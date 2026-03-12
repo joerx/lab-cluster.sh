@@ -16,6 +16,10 @@ secretStore:
 infisical:
   project: my-project
   path: clusters/my-cluster
+letsencrypt:
+  enabled: false
+  email: ""
+
 sourceRepos:
   - 'https://kubernetes.github.io/ingress-nginx'
   - 'https://grafana.github.io/helm-charts'

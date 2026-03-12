@@ -1,3 +1,4 @@
+{{- if not .Values.letsencrypt.enabled }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer
@@ -6,3 +7,4 @@ metadata:
   namespace: cert-manager
 spec:
   selfSigned: {}
+{{- end }}

@@ -1,2 +1,6 @@
 cluster:
   domain: k3s-lab.local
+
+letsencrypt:
+  enabled: false
+  email: ""

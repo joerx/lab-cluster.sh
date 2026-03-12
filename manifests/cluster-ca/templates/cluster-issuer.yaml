@@ -1,3 +1,21 @@
+{{- if .Values.letsencrypt.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: cluster-issuer
+spec:
+  acme:
+    email: {{ .Values.letsencrypt.email }}
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+    solvers:
+      - dns01:
+          webhook:
+            groupName: acme.slicen.me
+            solverName: linode
+{{- else }}
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -7,3 +25,4 @@ metadata:
 spec:
   ca:
     secretName: root-ca
+{{- end }}
