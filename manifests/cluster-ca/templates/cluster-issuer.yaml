@@ -11,13 +11,14 @@ spec:
     privateKeySecretRef:
       name: letsencrypt-account-key
     solvers:
-      - http01:
-          ingress:
-            ingressClassName: nginx
-            ingressTemplate:
-              metadata:
-                annotations:
-                  nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      - dns01:
+          webhook:
+            groupName: acme.slicen.me
+            solverName: linode
+            config:
+              apiKeySecretRef:
+                name: linode-token
+                key: LINODE_TOKEN
 {{- else }}
 ---
 apiVersion: cert-manager.io/v1
