@@ -17,7 +17,7 @@ spec:
           domain: '{{ .Values.cluster.domain }}'
         letsencrypt:
           enabled: {{ .Values.letsencrypt.enabled }}
-          email: '{{ .Values.letsencrypt.email }}'
+          email: '{{ .Values.letsencrypt.email | default (printf "hostmaster@%s" .Values.cluster.domain) }}'
   destination:
     server: "https://kubernetes.default.svc"
     namespace: cert-manager

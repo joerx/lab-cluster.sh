@@ -21,7 +21,7 @@ INFISICAL_PROJECT="example-project"
 INFISICAL_PATH="/shared/argocd/bootstrap"
 DOMAIN=""
 SECRET_STORE_BACKEND="kubernetes"
-LETSENCRYPT_EMAIL=""
+LETSENCRYPT_ENABLED=""
 
 # Constants, cannot be set via flags or environment variables
 REPO_URL=git@github.com:joerx/lab-cluster.sh.git
@@ -98,8 +98,8 @@ while [[ $# -gt 0 ]]; do
       AUTO_SYNC="true"
       shift
       ;;
-    --letsencrypt-email)
-      LETSENCRYPT_EMAIL="$2"
+    --letsencrypt)
+      LETSENCRYPT_ENABLED="true"
       shift 2
       ;;
     --)
@@ -192,8 +192,7 @@ helm upgrade --install bootstrap-argo ./charts/bootstrap-argo \
   --set "secretStore.backend=$SECRET_STORE_BACKEND" \
   --set "infisical.project=$INFISICAL_PROJECT" \
   --set "infisical.path=$INFISICAL_PATH" \
-  --set "letsencrypt.enabled=${LETSENCRYPT_EMAIL:+true}" \
-  --set "letsencrypt.email=$LETSENCRYPT_EMAIL"
+  --set "letsencrypt.enabled=$LETSENCRYPT_ENABLED"
 
 # Installs the secret with the initial credentials (infisical backend) or seeds the
 # local-secrets namespace (kubernetes backend). Everything after that is managed by
