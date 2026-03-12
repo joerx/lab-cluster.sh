@@ -9,9 +9,9 @@ spec:
     kind: ClusterSecretStore
     name: cluster-secrets
   target:
-    name: linode-token
+    name: linode-credentials
   data:
-    - secretKey: LINODE_TOKEN
+    - secretKey: token
       remoteRef:
         key: external-dns
         property: LINODE_TOKEN

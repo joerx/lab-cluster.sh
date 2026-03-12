@@ -15,10 +15,6 @@ spec:
           webhook:
             groupName: acme.slicen.me
             solverName: linode
-            config:
-              apiKeySecretRef:
-                name: linode-token
-                key: LINODE_TOKEN
 {{- else }}
 ---
 apiVersion: cert-manager.io/v1
