@@ -21,7 +21,7 @@ INFISICAL_PROJECT="example-project"
 INFISICAL_PATH="/shared/argocd/bootstrap"
 DOMAIN=""
 SECRET_STORE_BACKEND="kubernetes"
-LETSENCRYPT_ENABLED=""
+LETSENCRYPT_ENABLED=false
 
 # Constants, cannot be set via flags or environment variables
 REPO_URL=git@github.com:joerx/lab-cluster.sh.git
