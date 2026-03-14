@@ -100,7 +100,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --letsencrypt)
       LETSENCRYPT_ENABLED="true"
-      shift 2
+      shift
       ;;
     --)
       shift
@@ -125,6 +125,7 @@ DOMAIN=${DOMAIN:-"$NAME.local"}
 
 log "Bootstrapping cluster '$NAME'"
 log "- Repo URL: $REPO_URL"
+log "- Auto sync: $AUTO_SYNC"
 log "- Target revision: $TARGET_REVISION"
 log "- Domain: $DOMAIN"
 log "- Secret store backend: $SECRET_STORE_BACKEND"
@@ -132,7 +133,6 @@ if [[ "$SECRET_STORE_BACKEND" == "infisical" ]]; then
   log "- Infisical project: $INFISICAL_PROJECT"
   log "- Infisical path: $INFISICAL_PATH"
 fi
-
 
 # Validate input parameters
 if [[ ! -f "$KEY_FILE" ]]; then
