@@ -27,3 +27,6 @@ sourceRepos:
   - 'https://ngrok.github.io/ngrok-operator'
   - 'https://charts.external-secrets.io'
   - 'https://kubernetes-sigs.github.io/external-dns/'
+
+ghcr:
+  pullSecretName: ghcr-pull-secret
