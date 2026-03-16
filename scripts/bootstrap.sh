@@ -22,6 +22,8 @@ INFISICAL_PATH="/shared/argocd/bootstrap"
 DOMAIN=""
 SECRET_STORE_BACKEND="kubernetes"
 LETSENCRYPT_ENABLED=false
+GHCR_USERNAME=""
+GHCR_TOKEN=""
 
 # Constants, cannot be set via flags or environment variables
 REPO_URL=git@github.com:joerx/lab-cluster.sh.git
@@ -102,6 +104,14 @@ while [[ $# -gt 0 ]]; do
       LETSENCRYPT_ENABLED="true"
       shift
       ;;
+    --ghcr-username)
+      GHCR_USERNAME="$2"
+      shift 2
+      ;;
+    --ghcr-token)
+      GHCR_TOKEN="$2"
+      shift 2
+      ;;
     --)
       shift
       break
@@ -122,6 +132,8 @@ done
 
 NAME=${NAME:-"k3s-lab-$(hostname)"}
 DOMAIN=${DOMAIN:-"$NAME.local"}
+GHCR_USERNAME=${GHCR_USERNAME:-$(git config user.name 2>/dev/null || true)}
+GHCR_TOKEN=${GHCR_TOKEN:-${GITHUB_TOKEN:-}}
 
 log "Bootstrapping cluster '$NAME'"
 log "- Repo URL: $REPO_URL"
@@ -192,7 +204,9 @@ helm upgrade --install bootstrap-argo ./charts/bootstrap-argo \
   --set "secretStore.backend=$SECRET_STORE_BACKEND" \
   --set "infisical.project=$INFISICAL_PROJECT" \
   --set "infisical.path=$INFISICAL_PATH" \
-  --set "letsencrypt.enabled=$LETSENCRYPT_ENABLED"
+  --set "letsencrypt.enabled=$LETSENCRYPT_ENABLED" \
+  --set "ghcr.username=${GHCR_USERNAME:-}" \
+  --set "ghcr.token=${GHCR_TOKEN:-}"
 
 # Installs the secret with the initial credentials (infisical backend) or seeds the
 # local-secrets namespace (kubernetes backend). Everything after that is managed by
