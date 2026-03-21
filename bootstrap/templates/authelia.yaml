@@ -76,8 +76,7 @@ spec:
             access_control:
               default_policy: one_factor
           persistence:
-            enabled: true
-            size: 100Mi
+            enabled: false
     - repoURL: '{{ .Values.source.repoURL }}'
       targetRevision: '{{ .Values.source.targetRevision }}'
       path: manifests/authelia
