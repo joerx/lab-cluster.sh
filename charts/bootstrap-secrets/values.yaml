@@ -16,3 +16,5 @@ localSecrets:
     GCLOUD_HOSTED_METRICS_ID: ""
   externalDns:
     LINODE_TOKEN: ""
+  authelia:
+    usersDatabase: ""

@@ -1,0 +1,94 @@
+{{- if .Values.authelia.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: authelia
+  namespace: argocd
+spec:
+  project: bootstrap
+  sources:
+    - repoURL: https://charts.authelia.com
+      chart: authelia
+      targetRevision: '{{ .Values.authelia.chartVersion }}'
+      helm:
+        valuesObject:
+          domain: '{{ .Values.cluster.domain }}'
+          pod:
+            replicas: 1
+            kind: Deployment
+            extraVolumes:
+              - name: users
+                secret:
+                  secretName: authelia-users
+            extraVolumeMounts:
+              - name: users
+                mountPath: /config/users_database.yml
+                subPath: users_database.yml
+                readOnly: true
+          ingress:
+            enabled: true
+            className: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: cluster-issuer
+            subdomain: auth
+            tls:
+              enabled: true
+              secret: authelia-tls
+          configMap:
+            theme: dark
+            log:
+              level: info
+            authentication_backend:
+              password_reset:
+                disable: true
+              file:
+                enabled: true
+                path: /config/users_database.yml
+                password:
+                  algorithm: argon2
+                  argon2:
+                    variant: argon2id
+                    iterations: 3
+                    memory: 65536
+                    parallelism: 4
+                    key_length: 32
+                    salt_length: 16
+            session:
+              name: authelia_session
+              same_site: lax
+              inactivity: 5m
+              expiration: 1h
+              remember_me: 1d
+              cookies:
+                - domain: '{{ .Values.cluster.domain }}'
+                  subdomain: auth
+                  authelia_url: 'https://auth.{{ .Values.cluster.domain }}'
+                  default_redirection_url: 'https://echo.{{ .Values.cluster.domain }}'
+            storage:
+              local:
+                enabled: true
+                path: /config/db.sqlite3
+            notifier:
+              disable_startup_check: false
+              filesystem:
+                enabled: true
+                filename: /tmp/notification.txt
+            access_control:
+              default_policy: one_factor
+          persistence:
+            enabled: true
+            size: 100Mi
+    - repoURL: '{{ .Values.source.repoURL }}'
+      targetRevision: '{{ .Values.source.targetRevision }}'
+      path: manifests/authelia
+  destination:
+    namespace: authelia
+    server: 'https://kubernetes.default.svc'
+  syncPolicy:
+    {{- if .Values.autosync.enabled }}
+    automated:
+      prune: true
+    {{- end }}
+    syncOptions:
+      - CreateNamespace=true
+{{- end }}

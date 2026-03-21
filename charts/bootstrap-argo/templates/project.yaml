@@ -12,6 +12,7 @@ spec:
     - 'https://ngrok.github.io/ngrok-operator'
     - 'https://charts.external-secrets.io'
     - 'https://kubernetes-sigs.github.io/external-dns/'
+    - 'https://charts.authelia.com'
   destinations:
   - namespace: '*'
     server: '*'

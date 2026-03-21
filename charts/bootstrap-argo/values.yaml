@@ -20,6 +20,10 @@ letsencrypt:
   enabled: false
   email: ""
 
+authelia:
+  enabled: false
+  chartVersion: "0.9.0"
+
 sourceRepos:
   - 'https://kubernetes.github.io/ingress-nginx'
   - 'https://grafana.github.io/helm-charts'
@@ -27,6 +31,7 @@ sourceRepos:
   - 'https://ngrok.github.io/ngrok-operator'
   - 'https://charts.external-secrets.io'
   - 'https://kubernetes-sigs.github.io/external-dns/'
+  - 'https://charts.authelia.com'
 
 ghcr:
   pullSecretName: ghcr-pull-secret
