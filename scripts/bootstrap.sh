@@ -37,7 +37,42 @@ log() {
 }
 
 usage() {
-  log "Usage: $0 NAME [--kubecfg <path>] [--context <ctx>] [--ssh-key <path>] [--repo-url <url>] [--version <rev>]"
+  cat >&2 <<EOF
+Usage: $0 [NAME] [options]
+
+  NAME  Cluster name (default: k3s-lab-<hostname>)
+
+Options:
+  --kubecfg <path>            Path to kubeconfig file (default: current KUBECONFIG)
+  --context <ctx>             Kubernetes context to use (default: current context)
+  --ssh-key <path>            SSH private key for repo access (default: ~/.ssh/id_ed25519)
+  --repo-url <url>            Git repository URL (default: $REPO_URL)
+  --version <rev>             Git target revision (default: main)
+  --domain <domain>           Cluster domain (default: <name>.local)
+  --auto-sync                 Enable ArgoCD auto-sync (default: off)
+  --letsencrypt               Enable Let's Encrypt certificates (requires --external-dns)
+  --external-dns              Enable external-dns (Linode)
+  --ngrok                     Enable ngrok ingress controller
+  --infisical-project <id>    Infisical project ID; enables Infisical secret backend
+  --infisical-path <path>     Infisical secret path (default: $INFISICAL_PATH)
+  --local                     Force local kubernetes secret backend
+  --ghcr-username <user>      GitHub Container Registry username
+  --ghcr-token <token>        GitHub Container Registry token
+
+Environment variables:
+  GITHUB_TOKEN                            Used as GHCR token if --ghcr-token is not set
+  INFISICAL_UNIVERSAL_AUTH_CLIENT_ID      Required when --infisical-project is set
+  INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET  Required when --infisical-project is set
+  LINODE_TOKEN                            Required when --external-dns is set
+  NGROK_API_KEY                           Required when --ngrok is set
+  NGROK_AUTHTOKEN                         Required when --ngrok is set
+  GCLOUD_K8S_RW_TOKEN                     Grafana Cloud token (kubernetes backend only)
+  GCLOUD_HOSTED_LOGS_ID                   Grafana Cloud logs instance ID (kubernetes backend only)
+  GCLOUD_HOSTED_METRICS_ID               Grafana Cloud metrics instance ID (kubernetes backend only)
+
+  When using the kubernetes backend (default), credentials are read from environment
+  variables and seeded into the cluster. See .env.example for the full list.
+EOF
 }
 
 # Load .env file if exists

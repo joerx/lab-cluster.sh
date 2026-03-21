@@ -19,13 +19,46 @@ Design Goals:
 
 ## Configuration
 
-All features of this tool can be managed via commandline flags and/or environment variables. However, these can get quite long for more complex scenarios, therefore you can also place a `.env` file in the local working directly that will be sourced if it exists.
+All features are configured via CLI flags and/or environment variables. For local development, place a `.env` file in the working directory — it will be sourced automatically. Copy `.env.example` to get started:
 
 ```sh
-INFISICAL_PROJECT_ID=some-secret-project
-INFISICAL_UNIVERSAL_AUTH_CLIENT_ID=...
-INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET=...
+cp .env.example .env
 ```
+
+### Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `NAME` | `k3s-lab-<hostname>` | Cluster name (positional) |
+| `--kubecfg <path>` | current `KUBECONFIG` | Path to kubeconfig file |
+| `--context <ctx>` | current context | Kubernetes context to use |
+| `--ssh-key <path>` | `~/.ssh/id_ed25519` | SSH private key for repo access |
+| `--repo-url <url>` | repo default | Git repository URL |
+| `--version <rev>` | `main` | Git target revision |
+| `--domain <domain>` | `<name>.local` | Cluster domain |
+| `--auto-sync` | off | Enable ArgoCD auto-sync |
+| `--letsencrypt` | off | Enable Let's Encrypt (requires `--external-dns`) |
+| `--external-dns` | off | Enable external-dns via Linode |
+| `--ngrok` | off | Enable ngrok ingress controller |
+| `--infisical-project <id>` | — | Infisical project ID; switches to Infisical secret backend |
+| `--infisical-path <path>` | `/shared/argocd/bootstrap` | Infisical secret path |
+| `--local` | — | Force local kubernetes secret backend |
+| `--ghcr-username <user>` | git user name | GitHub Container Registry username |
+| `--ghcr-token <token>` | `$GITHUB_TOKEN` | GitHub Container Registry token |
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GITHUB_TOKEN` | Recommended | Used as GHCR token if `--ghcr-token` is not set |
+| `INFISICAL_UNIVERSAL_AUTH_CLIENT_ID` | When `--infisical-project` is set | Infisical Universal Auth client ID |
+| `INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET` | When `--infisical-project` is set | Infisical Universal Auth client secret |
+| `LINODE_TOKEN` | When `--external-dns` is set | Linode API token for DNS management |
+| `NGROK_API_KEY` | When `--ngrok` is set | Ngrok API key |
+| `NGROK_AUTHTOKEN` | When `--ngrok` is set | Ngrok auth token |
+| `GCLOUD_K8S_RW_TOKEN` | kubernetes backend only | Grafana Cloud k8s read/write token |
+| `GCLOUD_HOSTED_LOGS_ID` | kubernetes backend only | Grafana Cloud hosted logs instance ID |
+| `GCLOUD_HOSTED_METRICS_ID` | kubernetes backend only | Grafana Cloud hosted metrics instance ID |
 
 ## Local Cluster Creation
 
@@ -39,9 +72,7 @@ Basically `k3s` but running on Docker. More lightweight and easier to stand up t
 
 ### VM Based Cluster (k3s)
 
-Start a development VM using `libvirt` on a Linux host. Useful when developing base images and cluster bootstrap scripts or to fully isolate the k8s control plane from the host operating system.
-
-We need a functioning setup of [KVM, QEMU and libvirt](https://joshrosso.com/docs/2020/2020-05-06-linux-hypervisor-setup/).
+Start a development VM using `libvirt` on a Linux host. Useful when developing base images and cluster bootstrap scripts or to fully isolate the k8s control plane from the host operating system. Requires a functioning setup of [KVM, QEMU and libvirt](https://joshrosso.com/docs/2020/2020-05-06-linux-hypervisor-setup/).
 
 On Fedora: 
 
@@ -80,7 +111,7 @@ Destroy VM (Will delete all data):
 ### Cloud Based Clusters
 
 - This tool is not designed to create cloud based clusters since there is too much variety between them
-- The [bootstrapping](#bootstrapping) components however are still intended to work on managed cluster by major providers
+- The [bootstrapping](#bootstrapping) components however are still intended to work on managed clusters by major providers
 - So far I tested this only for [Linode LKE](https://techdocs.akamai.com/cloud-computing/docs/linode-kubernetes-engine)
 - See [cloud cluster bootstrap](#cloud-based-deployment) for instructions how to bootstrap an LKE cluster
 
