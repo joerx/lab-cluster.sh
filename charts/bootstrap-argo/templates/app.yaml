@@ -19,6 +19,9 @@ spec:
         source:
           repoURL: '{{ .Values.source.repoURL }}'
           targetRevision: '{{ .Values.source.targetRevision }}'
+        authelia:
+          enabled: {{ .Values.authelia.enabled }}
+          chartVersion: '{{ .Values.authelia.chartVersion }}'
         autosync:
           enabled: {{ .Values.autosync.enabled }}
         secretStore:

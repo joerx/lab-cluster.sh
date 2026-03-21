@@ -15,7 +15,14 @@ NAME=""
 KEY_FILE="$HOME/.ssh/id_ed25519"
 TARGET_REVISION=main
 NGROK_ENABLED=false
+AUTHELIA_ENABLED=false
 AUTO_SYNC=false
+AUTHELIA_USERS_FILE=""
+
+cleanup() {
+  [[ -n "$AUTHELIA_USERS_FILE" ]] && rm -f "$AUTHELIA_USERS_FILE"
+}
+trap cleanup EXIT
 EXTERNAL_DNS_ENABLED=false
 INFISICAL_PROJECT="example-project"
 INFISICAL_PATH="/shared/argocd/bootstrap"
@@ -66,6 +73,7 @@ Environment variables:
   LINODE_TOKEN                            Required when --external-dns is set
   NGROK_API_KEY                           Required when --ngrok is set
   NGROK_AUTHTOKEN                         Required when --ngrok is set
+  AUTHELIA_ADMIN_PASSWORD                 Required when --authelia is set
   GCLOUD_K8S_RW_TOKEN                     Grafana Cloud token (kubernetes backend only)
   GCLOUD_HOSTED_LOGS_ID                   Grafana Cloud logs instance ID (kubernetes backend only)
   GCLOUD_HOSTED_METRICS_ID               Grafana Cloud metrics instance ID (kubernetes backend only)
@@ -139,6 +147,10 @@ while [[ $# -gt 0 ]]; do
       LETSENCRYPT_ENABLED="true"
       shift
       ;;
+    --authelia)
+      AUTHELIA_ENABLED="true"
+      shift
+      ;;
     --ghcr-username)
       GHCR_USERNAME="$2"
       shift 2
@@ -182,6 +194,10 @@ if [[ "$SECRET_STORE_BACKEND" == "infisical" ]]; then
 fi
 
 # Validate input parameters
+if [[ "$AUTHELIA_ENABLED" == "true" ]]; then
+  [[ -z "${AUTHELIA_ADMIN_PASSWORD:-}" ]] && { log "error: --authelia requires AUTHELIA_ADMIN_PASSWORD"; exit 1; }
+fi
+
 if [[ ! -f "$KEY_FILE" ]]; then
   log "SSH private key not found at $KEY_FILE. Please generate an SSH key pair to use with GitHub."
   usage
@@ -227,35 +243,69 @@ kubectl -n $ARGO_NAMESPACE wait deploy argo-cd-argocd-server --for jsonpath='{.s
 # Install the Application for ArgoCD to sync the bootstrap stack
 # Creates a project for the bootstrap application. Helm values passed here 
 # are used to toggle and configure the clusters core features
-helm upgrade --install bootstrap-argo ./charts/bootstrap-argo \
-  --namespace $ARGO_NAMESPACE \
-  --set "cluster.name=$NAME" \
-  --set "cluster.domain=$DOMAIN" \
-  --set "externalDNS.enabled=$EXTERNAL_DNS_ENABLED" \
-  --set "source.repoURL=$REPO_URL" \
-  --set "source.targetRevision=$TARGET_REVISION" \
-  --set-file "source.sshPrivateKey=$KEY_FILE" \
-  --set "autosync.enabled=$AUTO_SYNC" \
-  --set "secretStore.backend=$SECRET_STORE_BACKEND" \
-  --set "infisical.project=$INFISICAL_PROJECT" \
-  --set "infisical.path=$INFISICAL_PATH" \
-  --set "letsencrypt.enabled=$LETSENCRYPT_ENABLED" \
-  --set "ghcr.username=${GHCR_USERNAME:-}" \
+ARGO_ARGS=(
+  upgrade --install bootstrap-argo ./charts/bootstrap-argo
+  --namespace "$ARGO_NAMESPACE"
+  --set "cluster.name=$NAME"
+  --set "cluster.domain=$DOMAIN"
+  --set "externalDNS.enabled=$EXTERNAL_DNS_ENABLED"
+  --set "source.repoURL=$REPO_URL"
+  --set "source.targetRevision=$TARGET_REVISION"
+  --set-file "source.sshPrivateKey=$KEY_FILE"
+  --set "autosync.enabled=$AUTO_SYNC"
+  --set "secretStore.backend=$SECRET_STORE_BACKEND"
+  --set "infisical.project=$INFISICAL_PROJECT"
+  --set "infisical.path=$INFISICAL_PATH"
+  --set "letsencrypt.enabled=$LETSENCRYPT_ENABLED"
+  --set "ghcr.username=${GHCR_USERNAME:-}"
   --set "ghcr.token=${GHCR_TOKEN:-}"
+)
+
+[[ "$AUTHELIA_ENABLED" == "true" ]] && ARGO_ARGS+=(--set "authelia.enabled=true")
+
+helm "${ARGO_ARGS[@]}"
 
 # Installs the secret with the initial credentials (infisical backend) or seeds the
 # local-secrets namespace (kubernetes backend). Everything after that is managed by
 # ArgoCD, which deploys the external-secrets chart and ClusterSecretStores.
-helm upgrade --install bootstrap-secrets ./charts/bootstrap-secrets \
-  --namespace $EXTERNAL_SECRETS_NAMESPACE \
-  --create-namespace \
-  --set "backend=$SECRET_STORE_BACKEND" \
-  --set "universalAuth.clientId=${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-}" \
-  --set "universalAuth.clientSecret=${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET:-}" \
-  --set "localSecrets.grafana.GCLOUD_K8S_RW_TOKEN=${GCLOUD_K8S_RW_TOKEN:-}" \
-  --set "localSecrets.grafana.GCLOUD_HOSTED_LOGS_ID=${GCLOUD_HOSTED_LOGS_ID:-}" \
-  --set "localSecrets.grafana.GCLOUD_HOSTED_METRICS_ID=${GCLOUD_HOSTED_METRICS_ID:-}" \
+SECRETS_ARGS=(
+  upgrade --install bootstrap-secrets ./charts/bootstrap-secrets
+  --namespace "$EXTERNAL_SECRETS_NAMESPACE"
+  --create-namespace
+  --set "backend=$SECRET_STORE_BACKEND"
+  --set "universalAuth.clientId=${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-}"
+  --set "universalAuth.clientSecret=${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET:-}"
+  --set "localSecrets.grafana.GCLOUD_K8S_RW_TOKEN=${GCLOUD_K8S_RW_TOKEN:-}"
+  --set "localSecrets.grafana.GCLOUD_HOSTED_LOGS_ID=${GCLOUD_HOSTED_LOGS_ID:-}"
+  --set "localSecrets.grafana.GCLOUD_HOSTED_METRICS_ID=${GCLOUD_HOSTED_METRICS_ID:-}"
   --set "localSecrets.externalDns.LINODE_TOKEN=${LINODE_TOKEN:-}"
+)
+
+if [[ "$AUTHELIA_ENABLED" == "true" && "$SECRET_STORE_BACKEND" == "kubernetes" ]]; then
+  log "Generating Authelia users database..."
+  AUTHELIA_PASSWORD_HASH=$(openssl passwd -6 "${AUTHELIA_ADMIN_PASSWORD}")
+  AUTHELIA_USERS_FILE=$(mktemp)
+  cat > "$AUTHELIA_USERS_FILE" <<EOF
+localSecrets:
+  authelia:
+    usersDatabase: |
+      users:
+        admin:
+          displayname: Admin
+          password: "${AUTHELIA_PASSWORD_HASH}"
+          email: admin@${DOMAIN}
+          groups:
+            - admins
+EOF
+  SECRETS_ARGS+=(--values "$AUTHELIA_USERS_FILE")
+fi
+
+if [[ "$AUTHELIA_ENABLED" == "true" && "$SECRET_STORE_BACKEND" == "infisical" ]]; then
+  log "warning: --authelia with infisical backend requires manual seeding of the authelia-users secret"
+  log "  store users_database.yml content at key 'users_database.yml' under 'authelia-users' in Infisical"
+fi
+
+helm "${SECRETS_ARGS[@]}"
 
 # Print summary and help message
 log
