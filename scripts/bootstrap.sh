@@ -76,7 +76,7 @@ Environment variables:
   AUTHELIA_ADMIN_PASSWORD                 Required when --authelia is set
   GCLOUD_K8S_RW_TOKEN                     Grafana Cloud token (kubernetes backend only)
   GCLOUD_HOSTED_LOGS_ID                   Grafana Cloud logs instance ID (kubernetes backend only)
-  GCLOUD_HOSTED_METRICS_ID               Grafana Cloud metrics instance ID (kubernetes backend only)
+  GCLOUD_HOSTED_METRICS_ID                Grafana Cloud metrics instance ID (kubernetes backend only)
 
   When using the kubernetes backend (default), credentials are read from environment
   variables and seeded into the cluster. See .env.example for the full list.
