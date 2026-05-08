@@ -20,7 +20,7 @@ deployment:
 
 image:
   repository: linode/cert-manager-webhook-linode
-  tag: latest
+  tag: v0.4.1
   pullPolicy: Always
 
 nameOverride: ""
