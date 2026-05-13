@@ -18,9 +18,13 @@ NGROK_ENABLED=false
 AUTHELIA_ENABLED=false
 AUTO_SYNC=false
 AUTHELIA_USERS_FILE=""
+AUTHELIA_OIDC_SECRETS_FILE=""
+ARGOCD_OIDC_VALUES_FILE=""
 
 cleanup() {
   [[ -n "$AUTHELIA_USERS_FILE" ]] && rm -f "$AUTHELIA_USERS_FILE"
+  [[ -n "$AUTHELIA_OIDC_SECRETS_FILE" ]] && rm -f "$AUTHELIA_OIDC_SECRETS_FILE"
+  [[ -n "$ARGOCD_OIDC_VALUES_FILE" ]] && rm -f "$ARGOCD_OIDC_VALUES_FILE"
 }
 trap cleanup EXIT
 EXTERNAL_DNS_ENABLED=false
@@ -227,14 +231,48 @@ else
   log "Using default kubectl context"
 fi
 
+# Generate Authelia OIDC secrets upfront — needed by both ArgoCD and bootstrap-secrets
+if [[ "$AUTHELIA_ENABLED" == "true" ]]; then
+  log "Generating Authelia OIDC secrets..."
+  AUTHELIA_OIDC_HMAC_SECRET=$(openssl rand -hex 32)
+  AUTHELIA_OIDC_JWK_KEY=$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 2>/dev/null)
+  AUTHELIA_OIDC_ARGOCD_CLIENT_SECRET=$(openssl rand -hex 32)
+
+  ARGOCD_OIDC_VALUES_FILE=$(mktemp)
+  cat > "$ARGOCD_OIDC_VALUES_FILE" <<EOF
+configs:
+  cm:
+    oidc.config: |
+      name: Authelia
+      issuer: https://auth.${DOMAIN}
+      clientID: argocd
+      clientSecret: \$oidc.authelia.clientSecret
+      requestedScopes:
+        - openid
+        - profile
+        - email
+        - groups
+  rbac:
+    policy.csv: |
+      g, admins, role:admin
+  secret:
+    extra:
+      oidc.authelia.clientSecret: "${AUTHELIA_OIDC_ARGOCD_CLIENT_SECRET}"
+EOF
+fi
+
 log "Installing/upgrading ArgoCD in namespace '$ARGO_NAMESPACE'..."
-helm upgrade --install argo-cd argo-cd \
-  --repo https://argoproj.github.io/argo-helm \
-  --version $ARGO_CHART_VERSION \
-  --namespace $ARGO_NAMESPACE \
-  --create-namespace \
-  --values ./helm/argocd.yaml \
+ARGOCD_INSTALL_ARGS=(
+  upgrade --install argo-cd argo-cd
+  --repo https://argoproj.github.io/argo-helm
+  --version $ARGO_CHART_VERSION
+  --namespace $ARGO_NAMESPACE
+  --create-namespace
+  --values ./helm/argocd.yaml
   --set "server.ingress.hostname=argocd.$DOMAIN"
+)
+[[ "$AUTHELIA_ENABLED" == "true" ]] && ARGOCD_INSTALL_ARGS+=(--values "$ARGOCD_OIDC_VALUES_FILE")
+helm "${ARGOCD_INSTALL_ARGS[@]}"
 
 # Wait until we have at least one pod running
 log "Waiting for ArgoCD server to be ready..."
@@ -298,11 +336,25 @@ localSecrets:
             - admins
 EOF
   SECRETS_ARGS+=(--values "$AUTHELIA_USERS_FILE")
+
+  log "Seeding Authelia OIDC secrets into local-secrets..."
+  AUTHELIA_OIDC_SECRETS_FILE=$(mktemp)
+  cat > "$AUTHELIA_OIDC_SECRETS_FILE" <<EOF
+localSecrets:
+  authelia:
+    oidc:
+      hmacSecret: "${AUTHELIA_OIDC_HMAC_SECRET}"
+      jwkPrivateKey: |
+$(echo "${AUTHELIA_OIDC_JWK_KEY}" | sed 's/^/        /')
+      argocdClientSecret: "${AUTHELIA_OIDC_ARGOCD_CLIENT_SECRET}"
+EOF
+  SECRETS_ARGS+=(--values "$AUTHELIA_OIDC_SECRETS_FILE")
 fi
 
 if [[ "$AUTHELIA_ENABLED" == "true" && "$SECRET_STORE_BACKEND" == "infisical" ]]; then
   log "warning: --authelia with infisical backend requires manual seeding of the authelia-users secret"
   log "  store users_database.yml content at key 'users_database.yml' under 'authelia-users' in Infisical"
+  log "warning: OIDC secrets (authelia-oidc-hmac, authelia-oidc-jwk, authelia-oidc-argocd-client) must also be seeded in Infisical"
 fi
 
 helm "${SECRETS_ARGS[@]}"
@@ -315,7 +367,7 @@ log "You can get the status of the deployed applications with:"
 log 
 log "% kubectl -n $ARGO_NAMESPACE get applications"
 log
-log "To get the ArgoCD admin password:"
+log "To get the ArgoCD local admin password (use until Authelia OIDC is ready):"
 log
 log "% kubectl -n $ARGO_NAMESPACE get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo"
 log

@@ -20,11 +20,23 @@ spec:
               - name: users
                 secret:
                   secretName: authelia-users
+              - name: oidc-secrets
+                secret:
+                  secretName: authelia-oidc
             extraVolumeMounts:
               - name: users
                 mountPath: /config/users_database.yml
                 subPath: users_database.yml
                 readOnly: true
+              - name: oidc-secrets
+                mountPath: /secrets/oidc
+                readOnly: true
+            env:
+              - name: AUTHELIA_OIDC_ARGOCD_CLIENT_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: authelia-oidc
+                    key: AUTHELIA_OIDC_ARGOCD_CLIENT_SECRET
           ingress:
             enabled: true
             className: nginx
@@ -73,6 +85,29 @@ spec:
               filesystem:
                 enabled: true
                 filename: /tmp/notification.txt
+            identity_providers:
+              oidc:
+                hmac_secret:
+                  secret_name: authelia-oidc
+                  path: AUTHELIA_OIDC_HMAC_SECRET
+                jwks:
+                  - key_id: main
+                    algorithm: RS256
+                    use: sig
+                    key: /secrets/oidc/AUTHELIA_OIDC_JWK_KEY
+                clients:
+                  - client_id: argocd
+                    client_name: ArgoCD
+                    client_secret: '$plaintext${AUTHELIA_OIDC_ARGOCD_CLIENT_SECRET}'
+                    authorization_policy: one_factor
+                    redirect_uris:
+                      - 'https://argocd.{{ .Values.cluster.domain }}/auth/callback'
+                    scopes:
+                      - openid
+                      - groups
+                      - email
+                      - profile
+                    userinfo_signed_response_alg: none
             access_control:
               default_policy: one_factor
           persistence:

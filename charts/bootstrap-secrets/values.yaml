@@ -18,3 +18,7 @@ localSecrets:
     LINODE_TOKEN: ""
   authelia:
     usersDatabase: ""
+    oidc:
+      hmacSecret: ""
+      jwkPrivateKey: ""
+      argocdClientSecret: ""
